@@ -54,9 +54,30 @@ export class VFSModule implements IVFSModule {
     if (this.initialized) return;
     await this.storageAdapter.init();
 
-    this.nodes.set('c:\\\\', { name: 'C:', path: 'C:\\', type: 'directory', size: 0, createdAt: Date.now(), modifiedAt: Date.now() });
-    this.nodes.set('c:\\\\users', { name: 'Users', path: 'C:\\Users', type: 'directory', size: 0, createdAt: Date.now(), modifiedAt: Date.now() });
-    this.nodes.set('c:\\\\users\\\\reos', { name: 'ReOS', path: 'C:\\Users\\ReOS', type: 'directory', size: 0, createdAt: Date.now(), modifiedAt: Date.now() });
+    this.nodes.set('c:\\\\', {
+      name: 'C:',
+      path: 'C:\\',
+      type: 'directory',
+      size: 0,
+      createdAt: Date.now(),
+      modifiedAt: Date.now()
+    });
+    this.nodes.set('c:\\\\users', {
+      name: 'Users',
+      path: 'C:\\Users',
+      type: 'directory',
+      size: 0,
+      createdAt: Date.now(),
+      modifiedAt: Date.now()
+    });
+    this.nodes.set('c:\\\\users\\\\reos', {
+      name: 'ReOS',
+      path: 'C:\\Users\\ReOS',
+      type: 'directory',
+      size: 0,
+      createdAt: Date.now(),
+      modifiedAt: Date.now()
+    });
 
     // Always create default filesystem first, then overlay saved files
     await this.createDefaultFilesystem();
@@ -115,7 +136,11 @@ export class VFSModule implements IVFSModule {
         size: 0,
         createdAt: now,
         modifiedAt: now,
-        protected: f.includes('Admin') || f.includes('System') || f.includes('Windows') || f.includes('Program Files')
+        protected:
+          f.includes('Admin') ||
+          f.includes('System') ||
+          f.includes('Windows') ||
+          f.includes('Program Files')
       });
     }
 
@@ -131,7 +156,9 @@ export class VFSModule implements IVFSModule {
     });
 
     // === DEFAULT DOCUMENTATION FILES ===
-    await this.writeFile('C:\\Users\\ReOS\\README.txt', `Welcome to Re\`OS!
+    await this.writeFile(
+      'C:\\Users\\ReOS\\README.txt',
+      `Welcome to Re\`OS!
 
 Re\`OS is a 100% local-first, browser-native development operating environment.
 
@@ -142,9 +169,12 @@ Features:
 • Realistic Virtual Filesystem with Recycle Bin
 • Protected System Folders
 
-Version: 1.0.0`);
+Version: 1.0.0`
+    );
 
-    await this.writeFile('C:\\Users\\ReOS\\How To Use Re-OS.txt', `How To Use Re-OS
+    await this.writeFile(
+      'C:\\Users\\ReOS\\How To Use Re-OS.txt',
+      `How To Use Re-OS
 
 Welcome to Re\`OS — a browser-based development operating system.
 
@@ -185,24 +215,34 @@ C:\\Admin is a protected folder. It requires a password to access.
 TIPS
 • All changes are saved automatically in your browser
 • Deleted files go to Recycle Bin (can be restored)
-• Use "emptybin" command to permanently delete`);
+• Use "emptybin" command to permanently delete`
+    );
 
     // === SAMPLE CODE FILES ===
-    await this.writeFile('C:\\Users\\ReOS\\hello.py', `print("Welcome to Re\`OS Python Runtime")
+    await this.writeFile(
+      'C:\\Users\\ReOS\\hello.py',
+      `print("Welcome to Re\`OS Python Runtime")
 name = input("Enter your name: ")
-print(f"Hello, {name}!")`);
+print(f"Hello, {name}!")`
+    );
 
-    await this.writeFile('C:\\Users\\ReOS\\main.cpp', `#include <iostream>
+    await this.writeFile(
+      'C:\\Users\\ReOS\\main.cpp',
+      `#include <iostream>
 int main() {
     std::cout << "Hello from C++ in Re\`OS!" << std::endl;
     return 0;
-}`);
+}`
+    );
 
-    await this.writeFile('C:\\Users\\ReOS\\Main.java', `public class Main {
+    await this.writeFile(
+      'C:\\Users\\ReOS\\Main.java',
+      `public class Main {
     public static void main(String[] args) {
         System.out.println("Hello from Java in Re\`OS!");
     }
-}`);
+}`
+    );
 
     // Make README read-only
     const readmeNode = this.nodes.get('c:\\\\users\\\\reos\\\\readme.txt');
@@ -210,7 +250,9 @@ int main() {
   }
 
   // === Core methods (kept compatible) ===
-  public getCWD(): string { return this.cwd; }
+  public getCWD(): string {
+    return this.cwd;
+  }
 
   public async setCWD(newPath: string): Promise<boolean> {
     const norm = this.normalizePath(newPath);
@@ -244,7 +286,9 @@ int main() {
         });
       }
     }
-    return results.sort((a, b) => a.type !== b.type ? (a.type === 'directory' ? -1 : 1) : a.name.localeCompare(b.name));
+    return results.sort((a, b) =>
+      a.type !== b.type ? (a.type === 'directory' ? -1 : 1) : a.name.localeCompare(b.name)
+    );
   }
 
   public async exists(path: string): Promise<boolean> {
@@ -410,8 +454,12 @@ int main() {
     let curr = parts[0] + '\\';
     if (!this.nodes.has(curr.toLowerCase())) {
       this.nodes.set(curr.toLowerCase(), {
-        name: parts[0] + '\\', path: curr, type: 'directory', size: 0,
-        createdAt: Date.now(), modifiedAt: Date.now()
+        name: parts[0] + '\\',
+        path: curr,
+        type: 'directory',
+        size: 0,
+        createdAt: Date.now(),
+        modifiedAt: Date.now()
       });
     }
     for (let i = 1; i < parts.length - 1; i++) {
@@ -419,8 +467,12 @@ int main() {
       const key = curr.toLowerCase();
       if (!this.nodes.has(key)) {
         this.nodes.set(key, {
-          name: parts[i], path: curr, type: 'directory', size: 0,
-          createdAt: Date.now(), modifiedAt: Date.now()
+          name: parts[i],
+          path: curr,
+          type: 'directory',
+          size: 0,
+          createdAt: Date.now(),
+          modifiedAt: Date.now()
         });
       }
     }
@@ -441,7 +493,13 @@ int main() {
   }
 
   // Admin unlock
-  public unlockAdmin(): void { this.adminUnlocked = true; }
-  public lockAdmin(): void { this.adminUnlocked = false; }
-  public isAdminUnlocked(): boolean { return this.adminUnlocked; }
+  public unlockAdmin(): void {
+    this.adminUnlocked = true;
+  }
+  public lockAdmin(): void {
+    this.adminUnlocked = false;
+  }
+  public isAdminUnlocked(): boolean {
+    return this.adminUnlocked;
+  }
 }

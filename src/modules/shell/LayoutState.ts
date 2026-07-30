@@ -20,11 +20,13 @@ export class LayoutState implements ILayoutState {
     this.unsubscribers = [];
     this.editorOpen = false;
 
-    this.unsubscribers.push(this.bus.subscribe('LAYOUT:SET_EDITOR', (e) => {
-      const open = (e.payload as any)?.open ?? false;
-      this.editorOpen = open;
-      this.apply();
-    }));
+    this.unsubscribers.push(
+      this.bus.subscribe('LAYOUT:SET_EDITOR', e => {
+        const open = (e.payload as any)?.open ?? false;
+        this.editorOpen = open;
+        this.apply();
+      })
+    );
   }
 
   public static getInstance(): LayoutState {

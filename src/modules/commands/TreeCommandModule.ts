@@ -14,7 +14,11 @@ export class TreeCommandModule implements ICommand {
     _flags: Map<string, boolean>,
     _context: IExecutionContext
   ): Promise<ICommandResult> {
-    this.bus.publish('VFS:DIR_REQUEST', { targetPath: _context.cwd, detailed: true, showAll: true });
+    this.bus.publish('VFS:DIR_REQUEST', {
+      targetPath: _context.cwd,
+      detailed: true,
+      showAll: true
+    });
     return { success: true, exitCode: 0 };
   }
 

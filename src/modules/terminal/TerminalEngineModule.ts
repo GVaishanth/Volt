@@ -172,8 +172,8 @@ export class TerminalEngineModule implements ITerminalEngineModule {
   }
 
   public renderWelcomeBanner(): void {
-    const banner = `Re\`OS
-Version 1.0.0
+    const banner = `in.nextWeb
+Version 2.0.0
 Browser: Chrome (Chromium) / Modern Web
 Persistent Storage: 1.4 MB Used (OPFS)
 Supported Languages: C, C++, Python, Java
