@@ -87,11 +87,8 @@ export class VFSModule implements IVFSModule {
     }
 
     try {
-      // Clear legacy storage keys only if there is a detected V1 keys pattern, preventing boot locks
-      if (typeof localStorage !== 'undefined' && localStorage.getItem('volt_vfs_file_storage_v1') === null) {
-        localStorage.clear();
-      }
-
+      // Never clear the origin's localStorage here. GitHub Pages may share its origin
+      // with other projects, and a missing Volt key is normal for a first visit.
       const saved = await this.storageAdapter.loadVFSState();
 
       if (saved && saved.size > 0) {

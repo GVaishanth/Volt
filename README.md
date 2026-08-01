@@ -134,6 +134,17 @@ python3 serve.py
 ```
 Your standalone, high-performance web sandbox will be live at `http://localhost:8080`.
 
+### 5. Deploying to GitHub Pages
+This repository includes `.github/workflows/deploy.yml`. It builds `dist/` and deploys that artifact, including the bundled JavaScript and CSS.
+
+1. In **GitHub → Settings → Pages**, set **Build and deployment → Source** to **GitHub Actions**. Do **not** select **Deploy from a branch**.
+2. Push to `main` (or run **Actions → Deploy volt V2 to GitHub Pages → Run workflow**).
+3. Wait for the `deploy` job to finish and open the URL shown by its **Deploy to GitHub Pages** step.
+
+> **Why this matters:** the repository-root `index.html` is the Vite development entry point and refers to `/src/main.ts`. If Pages serves the `main` branch directly, GitHub Pages returns that TypeScript file with a non-JavaScript MIME type and the application never starts—the visible boot loader then appears to load forever. The workflow publishes `dist/index.html`, which is the browser-ready, single-file build.
+
+GitHub Pages does not provide the COOP/COEP headers used by `serve.py`; Volt detects unavailable capabilities and uses its regular browser fallbacks. The app must therefore be served over HTTPS by Pages, not opened from the repository URL or deployed from the source branch.
+
 ---
 
 ## 🧪 Verification & Automated Testing

@@ -31,9 +31,15 @@ export class CapabilityProfiler {
         navigator.storage &&
         typeof navigator.storage.getDirectory === 'function'
       ) {
-        // Quick probe to verify sync access handles or directory access in current context
-        await navigator.storage.getDirectory();
-        hasOPFS = true;
+        // Some hosted/sandboxed contexts can leave this promise pending indefinitely.
+        // OPFS is only a capability hint here (Volt persists through IndexedDB), so a
+        // short probe is sufficient and must never block the entire application boot.
+        const probe = navigator.storage.getDirectory();
+        const result = await Promise.race([
+          probe.then(() => true).catch(() => false),
+          new Promise<boolean>(resolve => setTimeout(() => resolve(false), 750))
+        ]);
+        hasOPFS = result;
       }
     } catch {
       hasOPFS = false;
