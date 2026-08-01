@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ReOSBus } from './ReOSBus';
+import { VoltBus } from './VoltBus';
 
-describe('ReOSBus Event Broker', () => {
+describe('VoltBus Event Broker', () => {
   it('should publish and subscribe to typed events cleanly', () => {
-    const bus = ReOSBus.getInstance();
+    const bus = VoltBus.getInstance();
     const callback = vi.fn();
 
     const unsubscribe = bus.subscribe('APP:BOOT_START', callback);

@@ -5,7 +5,7 @@ export interface ICommandHistoryModule {
   searchReverse(prefix: string): string[];
 }
 
-const HISTORY_STORAGE_KEY = 'reos_terminal_history_v1';
+const HISTORY_STORAGE_KEY = 'volt_terminal_history_v1';
 
 export class CommandHistoryModule implements ICommandHistoryModule {
   private history: string[] = [];

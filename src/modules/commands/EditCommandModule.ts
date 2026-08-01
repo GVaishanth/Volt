@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class EditCommandModule implements ICommand {
   public readonly name = 'edit';
   public readonly aliases = [];
   public readonly description =
     'Opens or creates a target file inside the 20% VS Code Modal Editor buffer with immediate focus.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],

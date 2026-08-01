@@ -21,10 +21,10 @@ export class EditorApp {
         body.style.height = '100%';
         body.style.width = '100%';
         body.style.overflow = 'hidden';
-        body.style.backgroundColor = 'var(--reos-editor-bg)';
+        body.style.backgroundColor = 'var(--volt-editor-bg)';
 
         body.innerHTML = `
-          <div class="editor-app-tab-bar" style="height: 34px; background: var(--reos-editor-bg); border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; display: flex; align-items: center;"></div>
+          <div class="editor-app-tab-bar" style="height: 34px; background: var(--volt-editor-bg); border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; display: flex; align-items: center;"></div>
           <div class="editor-app-monaco-container" style="flex: 1; overflow: hidden; position: relative;"></div>
         `;
 
@@ -35,14 +35,14 @@ export class EditorApp {
         this.editorModule.mount(monacoContainer);
 
         // Adjust css inside app
-        const wrapper = monacoContainer.querySelector('.reos-editor-wrapper') as HTMLElement;
+        const wrapper = monacoContainer.querySelector('.volt-editor-wrapper') as HTMLElement;
         if (wrapper) {
           wrapper.style.height = '100%';
           wrapper.style.width = '100%';
         }
 
         const textarea = monacoContainer.querySelector(
-          '#reos-editor-textarea'
+          '#volt-editor-textarea'
         ) as HTMLTextAreaElement;
         if (textarea) {
           textarea.style.height = '100%';

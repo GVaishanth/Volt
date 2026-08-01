@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class DelCommandModule implements ICommand {
   public readonly name = 'del';
   public readonly aliases = ['rm', 'erase'];
   public readonly description =
     'Deletes target files from the virtual filesystem, verifying open file descriptor locks.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],

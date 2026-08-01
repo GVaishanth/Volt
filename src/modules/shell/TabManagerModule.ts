@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { IWorkspaceTab } from '@types';
 
 export interface ITabManagerModule {
@@ -11,13 +11,13 @@ export interface ITabManagerModule {
 }
 
 export class TabManagerModule implements ITabManagerModule {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private tabs: Map<string, IWorkspaceTab> = new Map();
   private activePath: string | null = null;
   private container?: HTMLElement;
 
   constructor() {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
 
     this.bus.subscribe('EDITOR:OPEN', event => {
       if (event.payload) {
@@ -141,31 +141,31 @@ export class TabManagerModule implements ITabManagerModule {
   private render(): void {
     if (!this.container) return;
     if (this.tabs.size === 0) {
-      this.container.innerHTML = `<div class="reos-tab-bar-empty">No Editor Files Open (Terminal Full Workspace Mode)</div>`;
+      this.container.innerHTML = `<div class="volt-tab-bar-empty">No Editor Files Open (Terminal Full Workspace Mode)</div>`;
       return;
     }
 
-    let html = `<div class="reos-tabs-strip">`;
+    let html = `<div class="volt-tabs-strip">`;
     for (const tab of this.tabs.values()) {
-      const dirtyBullet = tab.isDirty ? ' <span class="reos-tab-dirty-dot">&bull;</span>' : '';
+      const dirtyBullet = tab.isDirty ? ' <span class="volt-tab-dirty-dot">&bull;</span>' : '';
       html += `
-        <div class="reos-tab-item ${tab.isActive ? 'active' : ''}" data-path="${tab.path}">
-          <span class="reos-tab-label">${tab.label}${dirtyBullet}</span>
-          <span class="reos-tab-close" data-path="${tab.path}">&times;</span>
+        <div class="volt-tab-item ${tab.isActive ? 'active' : ''}" data-path="${tab.path}">
+          <span class="volt-tab-label">${tab.label}${dirtyBullet}</span>
+          <span class="volt-tab-close" data-path="${tab.path}">&times;</span>
         </div>
       `;
     }
     html += `</div>`;
     this.container.innerHTML = html;
 
-    const items = this.container.querySelectorAll('.reos-tab-item');
+    const items = this.container.querySelectorAll('.volt-tab-item');
     items.forEach(item => {
       item.addEventListener('click', e => {
         const target = e.target as HTMLElement;
         const path = item.getAttribute('data-path');
         if (!path) return;
 
-        if (target && target.classList.contains('reos-tab-close')) {
+        if (target && target.classList.contains('volt-tab-close')) {
           e.stopPropagation();
           this.bus.publish('EDITOR:CLOSE', { path });
           return;

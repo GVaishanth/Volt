@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class HistoryCommandModule implements ICommand {
   public readonly name = 'history';
   public readonly aliases = [];
   public readonly description =
     'Outputs the numbered temporal history stack of previously executed terminal commands.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     _args: string[],

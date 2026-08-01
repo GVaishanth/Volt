@@ -1,12 +1,12 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class TimeCommandModule implements ICommand {
   public readonly name = 'time';
   public readonly aliases = [];
   public readonly description = 'Displays the current local system time.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     _args: string[],

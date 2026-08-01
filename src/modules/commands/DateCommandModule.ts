@@ -1,12 +1,12 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class DateCommandModule implements ICommand {
   public readonly name = 'date';
   public readonly aliases = [];
   public readonly description = 'Displays the current local system date.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     _args: string[],

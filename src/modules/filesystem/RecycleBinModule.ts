@@ -1,8 +1,8 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { VFSModule } from './VFSModule';
 
 export class RecycleBinModule {
-  private bus = ReOSBus.getInstance();
+  private bus = VoltBus.getInstance();
   private vfs: VFSModule;
 
   constructor(vfs: VFSModule) {

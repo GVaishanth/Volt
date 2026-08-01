@@ -1,12 +1,12 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class RenCommandModule implements ICommand {
   public readonly name = 'ren';
   public readonly aliases = ['rename'];
   public readonly description = 'Renames target files or directories in place.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],

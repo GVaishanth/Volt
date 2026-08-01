@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class DownloadCommandModule implements ICommand {
   public readonly name = 'download';
   public readonly aliases = [];
   public readonly description =
     'Downloads a target file from the virtual disk directly to your local PC disk as a regular browser download.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],

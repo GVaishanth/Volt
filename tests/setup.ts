@@ -1,4 +1,4 @@
-// Global Vitest setup file for Re`OS local-first environment mocking
+// Global Vitest setup file for Volt local-first environment mocking
 import { beforeAll, afterAll, beforeEach } from 'vitest';
 
 function clearStorage() {
@@ -7,7 +7,7 @@ function clearStorage() {
   } catch { /* ignore */ }
   try {
     if (typeof indexedDB !== 'undefined') {
-      indexedDB.deleteDatabase('reos_vfs_db_v1');
+      indexedDB.deleteDatabase('volt_vfs_db_v1');
     }
   } catch { /* ignore */ }
 }

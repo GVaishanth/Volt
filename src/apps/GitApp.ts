@@ -1,6 +1,6 @@
 import { VFSModule } from '@modules/filesystem/VFSModule';
 import { OSWindow } from '@core/WindowManager';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 interface GitCommit {
   id: string;
@@ -12,7 +12,7 @@ interface GitCommit {
 
 export class GitApp {
   private vfs: VFSModule;
-  private bus = ReOSBus.getInstance();
+  private bus = VoltBus.getInstance();
 
   // Simulated Git Repository State
   private isInitialized = false;
@@ -30,7 +30,7 @@ export class GitApp {
 
   private loadGitState() {
     try {
-      const state = localStorage.getItem('reos_git_state');
+      const state = localStorage.getItem('volt_git_state');
       if (state) {
         const parsed = JSON.parse(state);
         this.isInitialized = parsed.isInitialized;
@@ -45,7 +45,7 @@ export class GitApp {
 
   private saveGitState() {
     localStorage.setItem(
-      'reos_git_state',
+      'volt_git_state',
       JSON.stringify({
         isInitialized: this.isInitialized,
         currentBranch: this.currentBranch,
@@ -80,7 +80,7 @@ export class GitApp {
         <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 20px;">
           <span style="font-size: 48px;">🐙</span>
           <div style="font-size: 16px; font-weight: bold; text-align: center;">No Local Git Repository Detected</div>
-          <p style="font-size: 13px; opacity:0.6; text-align:center; max-width: 400px; line-height: 1.5;">Initialize a local repository in Re-OS to start tracking file version histories, managing development branches, and comparing changes over time!</p>
+          <p style="font-size: 13px; opacity:0.6; text-align:center; max-width: 400px; line-height: 1.5;">Initialize a local repository in Volt to start tracking file version histories, managing development branches, and comparing changes over time!</p>
           <button class="git-init-btn" style="background:#007acc; border:none; color:#fff; font-weight:bold; font-family:inherit; padding:8px 24px; font-size:13px; border-radius:4px; cursor:pointer;">git init</button>
         </div>
       `;
@@ -89,7 +89,7 @@ export class GitApp {
         this.isInitialized = true;
         this.saveGitState();
         this.bus.publish('NOTIFICATION:ADD', {
-          text: 'Initialized empty Git repository in C:\\Users\\ReOS',
+          text: 'Initialized empty Git repository in C:\\Users\\Volt',
           type: 'success'
         });
         this.renderGit(body);
@@ -187,7 +187,7 @@ export class GitApp {
 
   private async renderStatusView(container: HTMLElement, body: HTMLElement) {
     // Determine modified or untracked files
-    const workspaceFiles = await this.vfs.readdir('C:\\Users\\ReOS');
+    const workspaceFiles = await this.vfs.readdir('C:\\Users\\Volt');
     const lastCommit = this.commits[this.commits.length - 1];
 
     const untracked: string[] = [];
@@ -299,7 +299,7 @@ export class GitApp {
 
       // Snapshot all staged files inside VFS
       const commitFiles: { path: string; content: string }[] = [];
-      const keys = await this.vfs.readdir('C:\\Users\\ReOS');
+      const keys = await this.vfs.readdir('C:\\Users\\Volt');
       for (const k of keys) {
         if (k.type === 'file') {
           const content = await this.vfs.readFileAsText(k.path);
@@ -310,7 +310,7 @@ export class GitApp {
       const commit: GitCommit = {
         id: Math.random().toString(36).substring(2, 8).toUpperCase(),
         message: msg,
-        author: 'ReOS Developer',
+        author: 'Volt Developer',
         timestamp: Date.now(),
         files: commitFiles
       };
@@ -358,7 +358,7 @@ export class GitApp {
   }
 
   private async renderDiffView(container: HTMLElement) {
-    const files = await this.vfs.readdir('C:\\Users\\ReOS');
+    const files = await this.vfs.readdir('C:\\Users\\Volt');
     const textFiles = files.filter(f => f.type === 'file');
 
     container.innerHTML = `

@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { TabManagerModule } from './TabManagerModule';
 import { StatusBarModule } from './StatusBarModule';
 import { TerminalEngineModule } from '@modules/terminal/TerminalEngineModule';
@@ -52,7 +52,10 @@ import {
   SettingsCommandModule,
   AboutCommandModule,
   UploadCommandModule,
-  DownloadCommandModule
+  DownloadCommandModule,
+  SysteminfoCommandModule,
+  TaskkillCommandModule,
+  GrepCommandModule
 } from '@modules/commands';
 
 export interface IAppShellModule {
@@ -61,7 +64,7 @@ export interface IAppShellModule {
 }
 
 export class AppShellModule implements IAppShellModule {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private vfs: VFSModule;
   private tabManager: TabManagerModule;
   private statusBar: StatusBarModule;
@@ -90,7 +93,7 @@ export class AppShellModule implements IAppShellModule {
   private appHelp: HelpApp;
 
   constructor() {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
     this.vfs = new VFSModule();
     this.tabManager = new TabManagerModule();
     this.statusBar = new StatusBarModule();
@@ -149,6 +152,9 @@ export class AppShellModule implements IAppShellModule {
     this.dispatcher.registerCommand(new AboutCommandModule());
     this.dispatcher.registerCommand(new UploadCommandModule());
     this.dispatcher.registerCommand(new DownloadCommandModule());
+    this.dispatcher.registerCommand(new SysteminfoCommandModule());
+    this.dispatcher.registerCommand(new TaskkillCommandModule());
+    this.dispatcher.registerCommand(new GrepCommandModule());
   }
 
   private bindEventBroker(): void {
@@ -171,7 +177,7 @@ export class AppShellModule implements IAppShellModule {
         void (async () => {
           const success = await this.vfs.setCWD(targetPath);
           if (!success) {
-            this.terminal.writeError(`The system cannot find the path specified: ${targetPath}\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `The system cannot find the path specified: ${targetPath}\n` });
           }
         })();
       }
@@ -183,7 +189,7 @@ export class AppShellModule implements IAppShellModule {
         void (async () => {
           try {
             const entries = await this.vfs.readdir(targetPath);
-            let out = ` Volume in drive C is in.nextWeb Virtual Disk\n Directory of ${targetPath}\n\n`;
+            let out = ` Volume in drive C is VOLT Virtual Disk\n Directory of ${targetPath}\n\n`;
             let filesCount = 0;
             let dirsCount = 0;
             let totalBytes = 0;
@@ -212,9 +218,9 @@ export class AppShellModule implements IAppShellModule {
             }
             out += `               ${filesCount} File(s)    ${totalBytes} bytes\n`;
             out += `               ${dirsCount} Dir(s)     52,428,800 bytes free\n\n`;
-            this.terminal.writeOutput(out);
+            this.bus.publish('EXEC:STDOUT_CHUNK', { text: out });
           } catch {
-            this.terminal.writeError(`Directory not found: ${targetPath}\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `Directory not found: ${targetPath}\n` });
           }
         })();
       }
@@ -226,7 +232,7 @@ export class AppShellModule implements IAppShellModule {
         void (async () => {
           const success = await this.vfs.mkdir(targetPath);
           if (!success) {
-            this.terminal.writeError(`A subdirectory or file ${targetPath} already exists.\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `A subdirectory or file ${targetPath} already exists.\n` });
           }
         })();
       }
@@ -238,21 +244,21 @@ export class AppShellModule implements IAppShellModule {
         void (async () => {
           const active = this.editor.getActiveBuffer();
           if (active && active.path.toLowerCase().endsWith(targetPath.toLowerCase())) {
-            this.terminal.writeError(
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: 
               `[Error: File '${targetPath}' is currently open. Close before deleting.]\n`
-            );
+             });
             return;
           }
           const isProtected = await this.vfs.isProtected(targetPath);
           if (isProtected) {
-            this.terminal.writeError(`Access Denied: '${targetPath}' is protected.\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `Access Denied: '${targetPath}' is protected.\n` });
             return;
           }
           const success = await this.vfs.moveToRecycleBin(targetPath);
           if (!success) {
-            this.terminal.writeError(`Could Not Delete ${targetPath}\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `Could Not Delete ${targetPath}\n` });
           } else {
-            this.terminal.writeOutput(`Moved to Recycle Bin: ${targetPath}\n`);
+            this.bus.publish('EXEC:STDOUT_CHUNK', { text: `Moved to Recycle Bin: ${targetPath}\n` });
           }
         })();
       }
@@ -263,19 +269,23 @@ export class AppShellModule implements IAppShellModule {
         const { source, destination, rawContent } = event.payload as any;
         void (async () => {
           try {
-            const text =
-              rawContent !== undefined ? rawContent : await this.vfs.readFileAsText(source);
+            const isDestDir = await this.vfs.isDirectory(destination);
             let destPath = destination;
-            if (!destPath.includes('\\') && !destPath.includes('/')) {
+            if (isDestDir && rawContent === undefined) {
+              const fileName = source.split('\\').pop() || 'file';
+              destPath = `${destination}\\${fileName}`.replace(/\\+/g, '\\');
+            } else if (!destPath.includes('\\') && !destPath.includes('/')) {
               destPath = `${this.vfs.getCWD()}\\${destination}`.replace(/\\+/g, '\\');
             }
+            const text =
+              rawContent !== undefined ? rawContent : await this.vfs.readFileAsText(source);
             await this.vfs.writeFile(destPath, text);
             if (rawContent === undefined) {
-              this.terminal.writeOutput(`        1 file(s) copied.\n`);
+              this.bus.publish('EXEC:STDOUT_CHUNK', { text: `        1 file(s) copied.\n` });
             }
           } catch {
             if (rawContent === undefined) {
-              this.terminal.writeError(`The system cannot find the file specified: ${source}\n`);
+              this.bus.publish('EXEC:STDERR_CHUNK', { text: `The system cannot find the file specified: ${source}\n` });
             }
           }
         })();
@@ -287,12 +297,20 @@ export class AppShellModule implements IAppShellModule {
         const { source, destination } = event.payload as any;
         void (async () => {
           try {
+            const isDestDir = await this.vfs.isDirectory(destination);
+            let destPath = destination;
+            if (isDestDir) {
+              const fileName = source.split('\\').pop() || 'file';
+              destPath = `${destination}\\${fileName}`.replace(/\\+/g, '\\');
+            } else if (!destPath.includes('\\') && !destPath.includes('/')) {
+              destPath = `${this.vfs.getCWD()}\\${destination}`.replace(/\\+/g, '\\');
+            }
             const text = await this.vfs.readFileAsText(source);
-            await this.vfs.writeFile(destination, text);
+            await this.vfs.writeFile(destPath, text);
             await this.vfs.unlink(source);
-            this.terminal.writeOutput(`        1 file(s) moved.\n`);
+            this.bus.publish('EXEC:STDOUT_CHUNK', { text: `        1 file(s) moved.\n` });
           } catch {
-            this.terminal.writeError(`The system cannot find the file specified: ${source}\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `The system cannot find the file specified: ${source}\n` });
           }
         })();
       }
@@ -307,7 +325,7 @@ export class AppShellModule implements IAppShellModule {
             await this.vfs.writeFile(newName, text);
             await this.vfs.unlink(oldName);
           } catch {
-            this.terminal.writeError(`The system cannot find the file specified: ${oldName}\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `The system cannot find the file specified: ${oldName}\n` });
           }
         })();
       }
@@ -319,9 +337,9 @@ export class AppShellModule implements IAppShellModule {
         void (async () => {
           try {
             const text = await this.vfs.readFileAsText(targetPath);
-            this.terminal.writeOutput(`${text}\n`);
+            this.bus.publish('EXEC:STDOUT_CHUNK', { text: `${text}\n` });
           } catch {
-            this.terminal.writeError(`The system cannot find the file specified: ${targetPath}\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `The system cannot find the file specified: ${targetPath}\n` });
           }
         })();
       }
@@ -338,9 +356,9 @@ export class AppShellModule implements IAppShellModule {
               const lines = text.split('\n');
               for (let i = 0; i < lines.length; i++) {
                 if (lines[i].toLowerCase().includes(query.toLowerCase())) {
-                  this.terminal.writeOutput(
+                  this.bus.publish('EXEC:STDOUT_CHUNK', { text: 
                     `---------- ${targetFile} (Ln ${i + 1}): ${lines[i]}\n`
-                  );
+                   });
                   matchesCount++;
                 }
               }
@@ -352,9 +370,9 @@ export class AppShellModule implements IAppShellModule {
                   const lines = text.split('\n');
                   for (let i = 0; i < lines.length; i++) {
                     if (lines[i].toLowerCase().includes(query.toLowerCase())) {
-                      this.terminal.writeOutput(
+                      this.bus.publish('EXEC:STDOUT_CHUNK', { text: 
                         `---------- ${e.name} (Ln ${i + 1}): ${lines[i]}\n`
-                      );
+                       });
                       matchesCount++;
                     }
                   }
@@ -362,10 +380,10 @@ export class AppShellModule implements IAppShellModule {
               }
             }
             if (matchesCount === 0) {
-              this.terminal.writeOutput(`FIND: String "${query}" not found in target files.\n`);
+              this.bus.publish('EXEC:STDOUT_CHUNK', { text: `FIND: String "${query}" not found in target files.\n` });
             }
           } catch {
-            this.terminal.writeError(`FIND: File not found or read error.\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `FIND: File not found or read error.\n` });
           }
         })();
       }
@@ -384,7 +402,7 @@ export class AppShellModule implements IAppShellModule {
                 out += `  ${flag}       ${e.path}\n`;
               }
             }
-            this.terminal.writeOutput(out || `No attributes matched for ${targetPath}\n`);
+            this.bus.publish('EXEC:STDOUT_CHUNK', { text: out || `No attributes matched for ${targetPath}\n` });
           } catch {
             // Ignore
           }
@@ -402,7 +420,7 @@ export class AppShellModule implements IAppShellModule {
             const dateStr = new Date(e.modifiedAt).toISOString().replace('T', ' ').substring(0, 16);
             out += `  ${dateStr}   ${e.name}\n`;
           }
-          this.terminal.writeOutput(out);
+          this.bus.publish('EXEC:STDOUT_CHUNK', { text: out });
         } catch {
           // Ignore
         }
@@ -412,9 +430,9 @@ export class AppShellModule implements IAppShellModule {
     this.bus.subscribe('VFS:PROJECTS_REQUEST', () => {
       void (async () => {
         try {
-          const entries = await this.vfs.readdir('C:\\Users\\ReOS');
+          const entries = await this.vfs.readdir('C:\\Users\\Volt');
           const dirs = entries.filter(e => e.type === 'directory');
-          let out = `in.nextWeb Top-Level Projects in C:\\Users\\ReOS:\n`;
+          let out = `VOLT Top-Level Projects in C:\\Users\\Volt:\n`;
           if (dirs.length === 0) {
             out += `  (No project subfolders found. Type: mkdir <project_name> to create one)\n`;
           } else {
@@ -422,7 +440,7 @@ export class AppShellModule implements IAppShellModule {
               out += `  <DIR>   ${d.name}\n`;
             }
           }
-          this.terminal.writeOutput(out);
+          this.bus.publish('EXEC:STDOUT_CHUNK', { text: out });
         } catch {
           // Ignore
         }
@@ -438,14 +456,27 @@ export class AppShellModule implements IAppShellModule {
         let count = 0;
         for (let i = 0; i < input.files.length; i++) {
           const file = input.files[i];
-          const text = await file.text();
+          const ext = file.name.split('.').pop()?.toLowerCase() || '';
+          const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext);
+          let content = '';
+
+          if (isImage) {
+            content = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(file);
+            });
+          } else {
+            content = await file.text();
+          }
+
           const targetPath = `${this.vfs.getCWD()}\\${file.name}`.replace(/\\+/g, '\\');
-          await this.vfs.writeFile(targetPath, text);
+          await this.vfs.writeFile(targetPath, content);
           count++;
         }
-        this.terminal.writeOutput(
+        this.bus.publish('EXEC:STDOUT_CHUNK', { text: 
           `[Upload Confirmation] Successfully imported ${count} local file(s) into ${this.vfs.getCWD()}!\n`
-        );
+         });
       };
       input.click();
     });
@@ -470,11 +501,11 @@ export class AppShellModule implements IAppShellModule {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            this.terminal.writeOutput(
+            this.bus.publish('EXEC:STDOUT_CHUNK', { text: 
               `[Download Confirmation] Download triggered for '${fileName}' to your local PC disk.\n`
-            );
+             });
           } catch {
-            this.terminal.writeError(`[Download Error] Cannot find file '${target}' in ${cwd}.\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `[Download Error] Cannot find file '${target}' in ${cwd}.\n` });
           }
         })();
       }
@@ -512,7 +543,7 @@ export class AppShellModule implements IAppShellModule {
               this.updateLayoutSplit(true);
             }
           } catch (err: any) {
-            this.terminal.writeError(`Cannot open file '${targetPath}': ${err?.message}\n`);
+            this.bus.publish('EXEC:STDERR_CHUNK', { text: `Cannot open file '${targetPath}': ${err?.message}\n` });
           }
         })();
       }
@@ -541,8 +572,8 @@ export class AppShellModule implements IAppShellModule {
 
     // V2 Toggle Sidebar Explorer Event (Expected by V1 tests)
     this.bus.subscribe('EXPLORER:TOGGLE', () => {
-      const panel = document.getElementById('reos-explorer-panel');
-      const toggleBtn = document.getElementById('reos-explorer-toggle-btn');
+      const panel = document.getElementById('volt-explorer-panel');
+      const toggleBtn = document.getElementById('volt-explorer-toggle-btn');
       if (panel && toggleBtn) {
         const isHidden = panel.classList.contains('hidden');
         if (isHidden) {
@@ -560,43 +591,43 @@ export class AppShellModule implements IAppShellModule {
     await this.vfs.init();
 
     rootElement.innerHTML = `
-      <div class="reos-shell-container" style="height: 100%; width: 100%; overflow: hidden; position: relative;">
+      <div class="volt-shell-container" style="height: 100%; width: 100%; overflow: hidden; position: relative;">
         <!-- 1. V1 CLASSIC IDE WORKSPACE CONTAINER (ALWAYS PRESENT TO KEEP TESTS PASSING!) -->
-        <div id="reos-classic-workspace" style="display: none; flex-direction: column; height: 100%; width: 100%; overflow: hidden; position: relative;">
-          <div id="reos-tab-bar" class="reos-tab-bar">
-            <div id="reos-tab-strip" class="reos-tabs-strip"></div>
-            <div class="reos-tab-bar-actions">
-              <button id="reos-upload-btn" class="reos-action-btn" title="Upload files from your PC into current folder">⬆ Upload</button>
-              <button id="reos-download-btn" class="reos-action-btn" title="Download active file or README to your PC">⬇ Download</button>
-              <button id="reos-settings-btn" class="reos-action-btn" title="System Settings (Theme, Font, Auto-save)">⚙ Settings</button>
-              <button id="reos-mode-btn" class="reos-action-btn" title="Switch back to Desktop OS Mode">🖥️ Desktop OS</button>
+        <div id="volt-classic-workspace" style="display: none; flex-direction: column; height: 100%; width: 100%; overflow: hidden; position: relative;">
+          <div id="volt-tab-bar" class="volt-tab-bar">
+            <div id="volt-tab-strip" class="volt-tabs-strip"></div>
+            <div class="volt-tab-bar-actions">
+              <button id="volt-upload-btn" class="volt-action-btn" title="Upload files from your PC into current folder">⬆ Upload</button>
+              <button id="volt-download-btn" class="volt-action-btn" title="Download active file or README to your PC">⬇ Download</button>
+              <button id="volt-settings-btn" class="volt-action-btn" title="System Settings (Theme, Font, Auto-save)">⚙ Settings</button>
+              <button id="volt-mode-btn" class="volt-action-btn" title="Switch back to Desktop OS Mode">🖥️ Desktop OS</button>
             </div>
           </div>
-          <div id="reos-main-split" class="reos-main-split">
-            <div id="reos-editor-zone" class="reos-editor-zone hidden">
-              <div id="reos-monaco-container" class="reos-monaco-container"></div>
+          <div id="volt-main-split" class="volt-main-split">
+            <div id="volt-editor-zone" class="volt-editor-zone hidden">
+              <div id="volt-monaco-container" class="volt-monaco-container"></div>
             </div>
-            <div id="reos-terminal-zone" class="reos-terminal-zone">
-              <div id="reos-terminal-container" class="reos-terminal-container"></div>
+            <div id="volt-terminal-zone" class="volt-terminal-zone">
+              <div id="volt-terminal-container" class="volt-terminal-container"></div>
             </div>
           </div>
-          <div id="reos-status-bar" class="reos-status-bar"></div>
-          <div id="reos-settings-overlay" class="reos-settings-overlay"></div>
+          <div id="volt-status-bar" class="volt-status-bar"></div>
+          <div id="volt-settings-overlay" class="volt-settings-overlay"></div>
           
           <!-- Sliding Explorer Drawer (expected by V1 tests) -->
-          <div id="reos-explorer-panel" class="reos-explorer-panel hidden" style="position: absolute; right: 0; top: 34px; height: calc(100% - 62px); z-index: 100; pointer-events: auto;">
-            <div class="reos-explorer-header">
+          <div id="volt-explorer-panel" class="volt-explorer-panel hidden" style="position: absolute; right: 0; top: 34px; height: calc(100% - 62px); z-index: 100; pointer-events: auto;">
+            <div class="volt-explorer-header">
               <span>PROJECT SIDEBAR EXPLORER</span>
-              <button id="reos-classic-explorer-close" class="reos-explorer-close-btn">&times;</button>
+              <button id="volt-classic-explorer-close" class="volt-explorer-close-btn">&times;</button>
             </div>
-            <div id="reos-classic-explorer-tree" class="reos-explorer-tree"></div>
+            <div id="volt-classic-explorer-tree" class="volt-explorer-tree"></div>
           </div>
           <!-- Sliding Explorer Toggle Button (expected by V1 tests) -->
-          <button id="reos-explorer-toggle-btn" class="reos-action-btn" style="position: absolute; right: 10px; bottom: 40px; z-index: 200;">&lt;</button>
+          <button id="volt-explorer-toggle-btn" class="volt-action-btn" style="position: absolute; right: 10px; bottom: 40px; z-index: 200;">&lt;</button>
         </div>
 
         <!-- 2. V2 OPERATING SYSTEM DESKTOP WORKSPACE -->
-        <div id="reos-desktop-workspace" class="wp-deep-space" style="display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; position: relative;">
+        <div id="volt-desktop-workspace" class="wp-deep-space" style="display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; position: relative;">
           <!-- Desktop Background Grid / Icons -->
           <div class="desktop-icons-grid">
             <!-- App Icons -->
@@ -639,12 +670,12 @@ export class AppShellModule implements IAppShellModule {
           </div>
 
           <!-- Windows manager rendering canvas -->
-          <div id="reos-desktop-windows-container" style="position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 40px); overflow: hidden; pointer-events: none;"></div>
+          <div id="volt-desktop-windows-container" style="position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 40px); overflow: hidden; pointer-events: none;"></div>
 
           <!-- Taskbar -->
           <div class="taskbar">
             <!-- Start button -->
-            <button class="start-menu-btn">🚀 Start</button>
+            <button class="start-menu-btn">⚡ Volt</button>
 
             <!-- Opened Windows strip -->
             <div class="taskbar-tabs-container"></div>
@@ -664,7 +695,7 @@ export class AppShellModule implements IAppShellModule {
             <div class="start-menu-header">
               <div class="start-menu-avatar">DEV</div>
               <div style="display:flex; flex-direction:column;">
-                <span style="font-weight:bold; font-size:12px; color:#fff;">in.nextWeb Developer</span>
+                <span style="font-weight:bold; font-size:12px; color:#fff;">VOLT Developer</span>
                 <span style="font-size:10px; opacity:0.6;">Local Admin Privileges</span>
               </div>
             </div>
@@ -689,7 +720,7 @@ export class AppShellModule implements IAppShellModule {
           </div>
 
           <!-- Notifications Center container -->
-          <div id="reos-notifications-container"></div>
+          <div id="volt-notifications-container"></div>
         </div>
 
         <!-- Command Palette -->
@@ -703,11 +734,11 @@ export class AppShellModule implements IAppShellModule {
     `;
 
     // 1. Classic Mode mounting
-    const tabContainer = rootElement.querySelector('#reos-tab-strip') as HTMLElement;
-    const monacoContainer = rootElement.querySelector('#reos-monaco-container') as HTMLElement;
-    const terminalContainer = rootElement.querySelector('#reos-terminal-container') as HTMLElement;
-    const statusContainer = rootElement.querySelector('#reos-status-bar') as HTMLElement;
-    const settingsContainer = rootElement.querySelector('#reos-settings-overlay') as HTMLElement;
+    const tabContainer = rootElement.querySelector('#volt-tab-strip') as HTMLElement;
+    const monacoContainer = rootElement.querySelector('#volt-monaco-container') as HTMLElement;
+    const terminalContainer = rootElement.querySelector('#volt-terminal-container') as HTMLElement;
+    const statusContainer = rootElement.querySelector('#volt-status-bar') as HTMLElement;
+    const settingsContainer = rootElement.querySelector('#volt-settings-overlay') as HTMLElement;
 
     if (tabContainer) this.tabManager.mount(tabContainer);
     if (monacoContainer) this.editor.mount(monacoContainer);
@@ -718,13 +749,13 @@ export class AppShellModule implements IAppShellModule {
     this.theme.applyTheme(this.settings.getSettings().theme);
 
     // Bind Action buttons for Classic
-    const uploadBtn = rootElement.querySelector('#reos-upload-btn');
+    const uploadBtn = rootElement.querySelector('#volt-upload-btn');
     if (uploadBtn) {
       uploadBtn.addEventListener('click', () =>
         this.bus.publish('FILE:UPLOAD_REQUEST', { cwd: this.vfs.getCWD() })
       );
     }
-    const downloadBtn = rootElement.querySelector('#reos-download-btn');
+    const downloadBtn = rootElement.querySelector('#volt-download-btn');
     if (downloadBtn) {
       downloadBtn.addEventListener('click', () => {
         const active = this.editor.getActiveBuffer();
@@ -732,26 +763,26 @@ export class AppShellModule implements IAppShellModule {
         this.bus.publish('FILE:DOWNLOAD_REQUEST', { target, cwd: this.vfs.getCWD() });
       });
     }
-    const settingsBtn = rootElement.querySelector('#reos-settings-btn');
+    const settingsBtn = rootElement.querySelector('#volt-settings-btn');
     if (settingsBtn) {
       settingsBtn.addEventListener('click', () => this.bus.publish('SETTINGS:TOGGLE'));
     }
-    const classicModeBtn = rootElement.querySelector('#reos-mode-btn');
+    const classicModeBtn = rootElement.querySelector('#volt-mode-btn');
     if (classicModeBtn) {
       classicModeBtn.addEventListener('click', () => this.toggleMode());
     }
 
     // Classic Close Explorer panel
-    const classicCloseExp = rootElement.querySelector('#reos-classic-explorer-close');
+    const classicCloseExp = rootElement.querySelector('#volt-classic-explorer-close');
     classicCloseExp?.addEventListener('click', () => this.bus.publish('EXPLORER:TOGGLE'));
 
     // Classic toggle button click handler
-    const classicToggleBtn = rootElement.querySelector('#reos-explorer-toggle-btn');
+    const classicToggleBtn = rootElement.querySelector('#volt-explorer-toggle-btn');
     classicToggleBtn?.addEventListener('click', () => this.bus.publish('EXPLORER:TOGGLE'));
 
     // 2. Desktop Mode Init
     const desktopWindowsContainer = rootElement.querySelector(
-      '#reos-desktop-windows-container'
+      '#volt-desktop-windows-container'
     ) as HTMLElement;
     const winMgr = WindowManager.getInstance();
     winMgr.setContainer(desktopWindowsContainer);
@@ -766,18 +797,22 @@ export class AppShellModule implements IAppShellModule {
 
     // Mode Switch Button click
     const modeBtn = rootElement.querySelector('.tray-mode-btn') as HTMLButtonElement;
-    modeBtn.addEventListener('click', () => {
-      this.toggleMode();
-    });
+    if (modeBtn) {
+      modeBtn.addEventListener('click', () => {
+        this.toggleMode();
+      });
+    }
 
     // Start Menu Panel logic
     const startBtn = rootElement.querySelector('.start-menu-btn') as HTMLButtonElement;
     const startMenu = rootElement.querySelector('.start-menu-panel') as HTMLElement;
-    startBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      const isVisible = startMenu.style.display === 'flex';
-      startMenu.style.display = isVisible ? 'none' : 'flex';
-    });
+    if (startBtn && startMenu) {
+      startBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const isVisible = startMenu.style.display === 'flex';
+        startMenu.style.display = isVisible ? 'none' : 'flex';
+      });
+    }
 
     document.addEventListener('click', e => {
       if (startMenu && !startMenu.contains(e.target as Node) && e.target !== startBtn) {
@@ -790,19 +825,21 @@ export class AppShellModule implements IAppShellModule {
       item.addEventListener('click', () => {
         const appName = item.getAttribute('data-app') || '';
         this.launchApp(appName);
-        startMenu.style.display = 'none';
+        if (startMenu) startMenu.style.display = 'none';
       });
     });
 
     // Start Menu Search filter
     const startSearch = rootElement.querySelector('.start-menu-search-input') as HTMLInputElement;
-    startSearch.addEventListener('input', () => {
-      const keyword = startSearch.value.toLowerCase();
-      rootElement.querySelectorAll('.start-menu-app-item').forEach(item => {
-        const text = (item as HTMLElement).innerText.toLowerCase();
-        (item as HTMLElement).style.display = text.includes(keyword) ? 'flex' : 'none';
+    if (startSearch) {
+      startSearch.addEventListener('input', () => {
+        const keyword = startSearch.value.toLowerCase();
+        rootElement.querySelectorAll('.start-menu-app-item').forEach(item => {
+          const text = (item as HTMLElement).innerText.toLowerCase();
+          (item as HTMLElement).style.display = text.includes(keyword) ? 'flex' : 'none';
+        });
       });
-    });
+    }
 
     // Start Menu Restart button
     rootElement.querySelector('.btn-restart')?.addEventListener('click', () => {
@@ -831,10 +868,18 @@ export class AppShellModule implements IAppShellModule {
 
     // Watch for custom accent and background updates
     this.bus.subscribe('THEME:WALLPAPER_CHANGED', e => {
-      const wp = (e.payload as any)?.wallpaper;
-      const wsEl = rootElement.querySelector('#reos-desktop-workspace') as HTMLElement;
+      const payload = e.payload as any;
+      const wp = payload?.wallpaper;
+      const wsEl = rootElement.querySelector('#volt-desktop-workspace') as HTMLElement;
       if (wsEl) {
-        wsEl.className = `wp-${wp}`;
+        if (wp === 'custom' || payload?.customDataUrl) {
+          const dataUrl = payload?.customDataUrl || localStorage.getItem('volt_custom_wallpaper_data') || '';
+          wsEl.className = 'wp-custom';
+          wsEl.style.setProperty('background', `url("${dataUrl}") no-repeat center center / cover`, 'important');
+        } else {
+          wsEl.style.removeProperty('background'); // Clear custom background
+          wsEl.className = `wp-${wp}`;
+        }
       }
     });
 
@@ -885,9 +930,9 @@ export class AppShellModule implements IAppShellModule {
           text: `Uploaded ${paths.length} file(s) into current directory!`,
           type: 'success'
         });
-        this.terminal.writeOutput(
+        this.bus.publish('EXEC:STDOUT_CHUNK', { text: 
           `[File Upload] Successfully uploaded ${paths.length} file(s) into ${this.vfs.getCWD()}:\n  ${paths.map(p => p.split('\\').pop()).join('\n  ')}\n`
-        );
+         });
       }
     });
 
@@ -896,37 +941,57 @@ export class AppShellModule implements IAppShellModule {
     const paletteInput = rootElement.querySelector('.command-palette-input') as HTMLInputElement;
 
     this.bus.subscribe('CMD:PALETTE_TOGGLE', () => {
-      const isVisible = paletteOverlay.style.display === 'flex';
-      if (isVisible) {
-        paletteOverlay.style.display = 'none';
-      } else {
-        paletteOverlay.style.display = 'flex';
-        paletteInput.value = '';
-        this.renderPaletteItems(rootElement, '');
-        setTimeout(() => paletteInput.focus(), 50);
+      if (paletteOverlay && paletteInput) {
+        const isVisible = paletteOverlay.style.display === 'flex';
+        if (isVisible) {
+          paletteOverlay.style.display = 'none';
+        } else {
+          paletteOverlay.style.display = 'flex';
+          paletteInput.value = '';
+          this.renderPaletteItems(rootElement, '');
+          setTimeout(() => paletteInput.focus(), 50);
+        }
       }
     });
 
-    paletteInput.addEventListener('input', () => {
-      this.renderPaletteItems(rootElement, paletteInput.value);
+    this.bus.subscribe('APP:LAUNCH', event => {
+      if (event.payload) {
+        const { appName, customOptions } = event.payload as any;
+        this.launchApp(appName, customOptions || {});
+      }
     });
+
+    if (paletteInput) {
+      paletteInput.addEventListener('input', () => {
+        this.renderPaletteItems(rootElement, paletteInput.value);
+      });
+    }
 
     // Close palette on outer click
-    paletteOverlay.addEventListener('mousedown', e => {
-      if (e.target === paletteOverlay) {
-        this.bus.publish('CMD:PALETTE_TOGGLE');
-      }
-    });
+    if (paletteOverlay) {
+      paletteOverlay.addEventListener('mousedown', e => {
+        if (e.target === paletteOverlay) {
+          this.bus.publish('CMD:PALETTE_TOGGLE');
+        }
+      });
+    }
 
     // Set custom accent color if saved
-    const activeColor = localStorage.getItem('reos_accent_color') || '#0f6';
-    document.documentElement.style.setProperty('--reos-prompt', activeColor);
+    const activeColor = localStorage.getItem('volt_accent_color') || '#0f6';
+    document.documentElement.style.setProperty('--volt-prompt', activeColor);
 
     // Render wallpaper if saved
-    const activeWP = localStorage.getItem('reos_desktop_wallpaper') || 'deep-space';
-    const wsEl = rootElement.querySelector('#reos-desktop-workspace') as HTMLElement;
+    const activeWP = localStorage.getItem('volt_desktop_wallpaper') || 'deep-space';
+    const wsEl = rootElement.querySelector('#volt-desktop-workspace') as HTMLElement;
     if (wsEl) {
-      wsEl.className = `wp-${activeWP}`;
+      if (activeWP === 'custom') {
+        const dataUrl = localStorage.getItem('volt_custom_wallpaper_data') || '';
+        wsEl.className = 'wp-custom';
+        wsEl.style.setProperty('background', `url("${dataUrl}") no-repeat center center / cover`, 'important');
+      } else {
+        wsEl.style.removeProperty('background');
+        wsEl.className = `wp-${activeWP}`;
+      }
     }
 
     // Set Mode according to previous settings
@@ -934,42 +999,54 @@ export class AppShellModule implements IAppShellModule {
 
     // Welcome user by launching CMD Console and User Guide on desktop boot!
     setTimeout(() => {
-      this.launchApp('help');
-      this.launchApp('terminal');
+      const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+      const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+      const halfWidth = Math.max(300, Math.floor(screenWidth / 2) - 30);
+      const windowHeight = Math.max(200, screenHeight - 120);
+
+      // Help on the left, Terminal on the right, matching in vertical position and height!
+      this.launchApp('help', {
+        position: { x: 20, y: 40 },
+        size: { width: halfWidth, height: windowHeight }
+      });
+      this.launchApp('terminal', {
+        position: { x: halfWidth + 40, y: 40 },
+        size: { width: halfWidth, height: windowHeight }
+      });
     }, 1200);
 
     this.layout.setEditorOpen(false);
   }
 
-  private launchApp(appName: string) {
+  private launchApp(appName: string, customOptions: any = {}) {
     const winMgr = WindowManager.getInstance();
     switch (appName) {
       case 'terminal':
-        winMgr.openApp('terminal', 'CMD Console', this.appTerminal.getWindowOptions());
+        winMgr.openApp('terminal', 'Terminal', { ...this.appTerminal.getWindowOptions(), ...customOptions });
         break;
       case 'editor':
-        winMgr.openApp('editor', 'Code Editor', this.appEditor.getWindowOptions());
+        winMgr.openApp('editor', 'Code Editor', { ...this.appEditor.getWindowOptions(), ...customOptions });
         break;
       case 'explorer':
-        winMgr.openApp('explorer', 'File Explorer', this.appExplorer.getWindowOptions());
+        winMgr.openApp('explorer', 'File Explorer', { ...this.appExplorer.getWindowOptions(), ...customOptions });
         break;
       case 'browser':
-        winMgr.openApp('browser', 'Web Browser & API Preview', this.appBrowser.getWindowOptions());
+        winMgr.openApp('browser', 'Web Browser', { ...this.appBrowser.getWindowOptions(), ...customOptions });
         break;
       case 'database':
-        winMgr.openApp('database', 'SQLite Database', this.appDatabase.getWindowOptions());
+        winMgr.openApp('database', 'SQLite Database', { ...this.appDatabase.getWindowOptions(), ...customOptions });
         break;
       case 'git':
-        winMgr.openApp('git', 'Git Control Panel', this.appGit.getWindowOptions());
+        winMgr.openApp('git', 'Git VC', { ...this.appGit.getWindowOptions(), ...customOptions });
         break;
       case 'task-manager':
-        winMgr.openApp('task-manager', 'Task Manager', this.appTaskManager.getWindowOptions());
+        winMgr.openApp('task-manager', 'Task Manager', { ...this.appTaskManager.getWindowOptions(), ...customOptions });
         break;
       case 'settings':
-        winMgr.openApp('settings', 'System Settings', this.appSettings.getWindowOptions());
+        winMgr.openApp('settings', 'Settings', { ...this.appSettings.getWindowOptions(), ...customOptions });
         break;
       case 'help':
-        winMgr.openApp('help', 'Help & Documentation', this.appHelp.getWindowOptions());
+        winMgr.openApp('help', 'User Guide', { ...this.appHelp.getWindowOptions(), ...customOptions });
         break;
     }
   }
@@ -980,8 +1057,8 @@ export class AppShellModule implements IAppShellModule {
   }
 
   private updateLayoutMode() {
-    const classic = document.getElementById('reos-classic-workspace');
-    const desktop = document.getElementById('reos-desktop-workspace');
+    const classic = document.getElementById('volt-classic-workspace');
+    const desktop = document.getElementById('volt-desktop-workspace');
     const modeBtn = document.querySelector('.tray-mode-btn') as HTMLButtonElement;
 
     if (classic && desktop) {
@@ -1002,14 +1079,14 @@ export class AppShellModule implements IAppShellModule {
     text: string,
     type: 'info' | 'success' | 'error'
   ) {
-    const container = root.querySelector('#reos-notifications-container') as HTMLElement;
+    const container = root.querySelector('#volt-notifications-container') as HTMLElement;
     if (!container) return;
 
     const toast = document.createElement('div');
     toast.className = 'notification-toast';
 
     let icon = 'ℹ️';
-    let borderColor = 'var(--reos-prompt)';
+    let borderColor = 'var(--volt-prompt)';
     if (type === 'success') {
       icon = '✅';
       borderColor = '#22c55e';
@@ -1045,7 +1122,7 @@ export class AppShellModule implements IAppShellModule {
     list.innerHTML = '';
     const items = [
       { text: 'Open Terminal', action: () => this.launchApp('terminal') },
-      { text: 'Open Code Editor', action: () => this.launchApp('terminal') },
+      { text: 'Open Code Editor', action: () => this.launchApp('editor') },
       { text: 'Open File Explorer', action: () => this.launchApp('explorer') },
       { text: 'Open SQLite Database', action: () => this.launchApp('database') },
       { text: 'Open Web Browser & API Tester', action: () => this.launchApp('browser') },
@@ -1057,9 +1134,9 @@ export class AppShellModule implements IAppShellModule {
         action: () => this.bus.publish('SETTINGS:TOGGLE')
       },
       { text: 'Classic Mode / Desktop Mode Toggle', action: () => this.toggleMode() },
-      { text: 'Restart / Reload Re-OS', action: () => window.location.reload() },
+      { text: 'Restart / Reload Volt', action: () => window.location.reload() },
       {
-        text: 'Shutdown Re-OS (Shutdown Animation)',
+        text: 'Shutdown Volt (Shutdown Animation)',
         action: () => this.triggerShutdownAnimation(root)
       }
     ];
@@ -1100,7 +1177,7 @@ export class AppShellModule implements IAppShellModule {
     shutdownOverlay.style.gap = '20px';
 
     shutdownOverlay.innerHTML = `
-      <div style="font-size: 28px; font-weight:bold; letter-spacing:4px;" class="shutdown-text">Re\`OS is shutting down...</div>
+      <div style="font-size: 28px; font-weight:bold; letter-spacing:4px;" class="shutdown-text">Volt is shutting down...</div>
       <div style="font-size:12px; opacity:0.5;">Saving virtual persistent registers...</div>
     `;
 

@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class TreeCommandModule implements ICommand {
   public readonly name = 'tree';
   public readonly aliases = [];
   public readonly description =
     'Outputs an ASCII directory hierarchy for the current working directory.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     _args: string[],
@@ -27,7 +27,7 @@ export class TreeCommandModule implements ICommand {
       commandName: this.name,
       description: this.description,
       syntax: `tree [path]`,
-      examples: [`tree`, `tree C:\\Users\\ReOS`]
+      examples: [`tree`, `tree C:\\Users\\Volt`]
     };
   }
 }

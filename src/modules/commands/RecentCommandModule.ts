@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class RecentCommandModule implements ICommand {
   public readonly name = 'recent';
   public readonly aliases = [];
   public readonly description =
     'Displays a list of recently edited or executed files across the virtual filesystem.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     _args: string[],

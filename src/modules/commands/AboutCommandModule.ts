@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class AboutCommandModule implements ICommand {
   public readonly name = 'about';
   public readonly aliases = [];
   public readonly description =
-    'Displays information about Re`OS architecture and product philosophy.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+    'Displays information about Volt architecture and product philosophy.';
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     _args: string[],
@@ -15,7 +15,7 @@ export class AboutCommandModule implements ICommand {
     _context: IExecutionContext
   ): Promise<ICommandResult> {
     const text = `================================================================
-                           Re\`OS v1.0.0
+                           Volt v1.0.0
 ================================================================
 A 100% Local-First, Browser-Native Development Operating Environment.
 

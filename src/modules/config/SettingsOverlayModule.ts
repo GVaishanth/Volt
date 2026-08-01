@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { SettingsModule, ISystemSettings } from './SettingsModule';
 import { SYSTEM_CONSTANTS } from '@core/Constants';
 
@@ -9,13 +9,13 @@ export interface ISettingsOverlayModule {
 }
 
 export class SettingsOverlayModule implements ISettingsOverlayModule {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private settingsModule: SettingsModule;
   private container?: HTMLElement;
   private isOpen: boolean = false;
 
   constructor(settingsModule: SettingsModule) {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
     this.settingsModule = settingsModule;
 
     this.bus.subscribe('SETTINGS:TOGGLE', () => {
@@ -32,23 +32,23 @@ export class SettingsOverlayModule implements ISettingsOverlayModule {
   public mount(container: HTMLElement): void {
     this.container = container;
     this.container.innerHTML = `
-      <div id="reos-settings-modal" class="reos-settings-modal hidden">
-        <div class="reos-settings-card">
-          <div class="reos-settings-header">
-            <span>Re\`OS SYSTEM SETTINGS</span>
-            <button id="reos-settings-close-btn" class="reos-settings-close-btn">&times;</button>
+      <div id="volt-settings-modal" class="volt-settings-modal hidden">
+        <div class="volt-settings-card">
+          <div class="volt-settings-header">
+            <span>Volt SYSTEM SETTINGS</span>
+            <button id="volt-settings-close-btn" class="volt-settings-close-btn">&times;</button>
           </div>
-          <div id="reos-settings-body" class="reos-settings-body"></div>
+          <div id="volt-settings-body" class="volt-settings-body"></div>
         </div>
       </div>
     `;
 
-    const closeBtn = this.container.querySelector('#reos-settings-close-btn');
+    const closeBtn = this.container.querySelector('#volt-settings-close-btn');
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.closeOverlay());
     }
 
-    const modal = this.container.querySelector('#reos-settings-modal');
+    const modal = this.container.querySelector('#volt-settings-modal');
     if (modal) {
       modal.addEventListener('click', e => {
         if (e.target === modal) this.closeOverlay();
@@ -66,7 +66,7 @@ export class SettingsOverlayModule implements ISettingsOverlayModule {
 
   public openOverlay(): void {
     if (!this.container) return;
-    const modal = this.container.querySelector('#reos-settings-modal') as HTMLElement;
+    const modal = this.container.querySelector('#volt-settings-modal') as HTMLElement;
     if (modal) {
       modal.classList.remove('hidden');
       this.isOpen = true;
@@ -76,7 +76,7 @@ export class SettingsOverlayModule implements ISettingsOverlayModule {
 
   public closeOverlay(): void {
     if (!this.container) return;
-    const modal = this.container.querySelector('#reos-settings-modal') as HTMLElement;
+    const modal = this.container.querySelector('#volt-settings-modal') as HTMLElement;
     if (modal) {
       modal.classList.add('hidden');
       this.isOpen = false;
@@ -85,7 +85,7 @@ export class SettingsOverlayModule implements ISettingsOverlayModule {
 
   private renderForm(): void {
     if (!this.container) return;
-    const body = this.container.querySelector('#reos-settings-body') as HTMLElement;
+    const body = this.container.querySelector('#volt-settings-body') as HTMLElement;
     if (!body) return;
 
     const current: ISystemSettings = this.settingsModule.getSettings();
@@ -101,38 +101,38 @@ export class SettingsOverlayModule implements ISettingsOverlayModule {
     }
 
     body.innerHTML = `
-      <div class="reos-settings-section">
-        <label class="reos-settings-label" for="setting-theme">System Theme (70% CMD / 20% Editor)</label>
-        <select id="setting-theme" class="reos-settings-select">${themeOptions}</select>
+      <div class="volt-settings-section">
+        <label class="volt-settings-label" for="setting-theme">System Theme (70% CMD / 20% Editor)</label>
+        <select id="setting-theme" class="volt-settings-select">${themeOptions}</select>
       </div>
 
-      <div class="reos-settings-section">
-        <label class="reos-settings-label" for="setting-font">Monospaced Font Size</label>
-        <select id="setting-font" class="reos-settings-select">${fontSizeOptions}</select>
+      <div class="volt-settings-section">
+        <label class="volt-settings-label" for="setting-font">Monospaced Font Size</label>
+        <select id="setting-font" class="volt-settings-select">${fontSizeOptions}</select>
       </div>
 
-      <div class="reos-settings-section">
-        <label class="reos-settings-label" for="setting-autosave">Auto Save Buffer</label>
-        <select id="setting-autosave" class="reos-settings-select">
+      <div class="volt-settings-section">
+        <label class="volt-settings-label" for="setting-autosave">Auto Save Buffer</label>
+        <select id="setting-autosave" class="volt-settings-select">
           <option value="2000" ${current.autoSaveDelayMs === 2000 ? 'selected' : ''}>Enabled (2 seconds delay)</option>
           <option value="5000" ${current.autoSaveDelayMs === 5000 ? 'selected' : ''}>Enabled (5 seconds delay)</option>
           <option value="0" ${!current.autoSaveDelayMs ? 'selected' : ''}>Disabled (Manual Ctrl+S only)</option>
         </select>
       </div>
 
-      <div class="reos-settings-section">
-        <label class="reos-settings-label">
+      <div class="volt-settings-section">
+        <label class="volt-settings-label">
           <input type="checkbox" id="setting-wordwrap" ${current.wordWrap ? 'checked' : ''} />
           Word Wrap in Modal Code Editor (20% VS Code Layer)
         </label>
       </div>
 
-      <div class="reos-settings-actions">
-        <button id="setting-reset-btn" class="reos-settings-reset-btn">Reset All to Factory Defaults</button>
+      <div class="volt-settings-actions">
+        <button id="setting-reset-btn" class="volt-settings-reset-btn">Clear All Data</button>
       </div>
 
-      <div class="reos-settings-about">
-        <strong>Re\`OS v1.0.0 — Local-First Environment</strong>
+      <div class="volt-settings-about">
+        <strong>Volt v1.0.0 — Local-First Environment</strong>
         <p>100% Client-Side WebAssembly & Web Worker execution. Zero cloud compilation, zero backend telemetry. Inspired by Windows CMD (70%), VS Code modal editor (20%), and Chrome tabs (10%).</p>
       </div>
     `;
@@ -149,7 +149,7 @@ export class SettingsOverlayModule implements ISettingsOverlayModule {
       fontSelect.addEventListener('change', () => {
         const val = parseInt(fontSelect.value, 10) || 14;
         void this.settingsModule.updateSetting('fontSizePx', val);
-        document.documentElement.style.setProperty('--reos-font-size', `${val}px`);
+        document.documentElement.style.setProperty('--volt-font-size', `${val}px`);
       });
     }
 
@@ -165,7 +165,7 @@ export class SettingsOverlayModule implements ISettingsOverlayModule {
     if (wordWrapCheckbox) {
       wordWrapCheckbox.addEventListener('change', () => {
         void this.settingsModule.updateSetting('wordWrap', wordWrapCheckbox.checked);
-        const textarea = document.getElementById('reos-editor-textarea') as HTMLTextAreaElement;
+        const textarea = document.getElementById('volt-editor-textarea') as HTMLTextAreaElement;
         if (textarea) {
           textarea.wrap = wordWrapCheckbox.checked ? 'soft' : 'off';
         }
@@ -175,10 +175,14 @@ export class SettingsOverlayModule implements ISettingsOverlayModule {
     const resetBtn = body.querySelector('#setting-reset-btn') as HTMLButtonElement;
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
-        void this.settingsModule.resetToDefault();
-        document.documentElement.style.setProperty('--reos-font-size', '14px');
-        const textarea = document.getElementById('reos-editor-textarea') as HTMLTextAreaElement;
-        if (textarea) textarea.wrap = 'off';
+        if (confirm('Are you sure you want to clear all data and restart?')) {
+          localStorage.clear();
+          if (typeof indexedDB !== 'undefined') {
+            indexedDB.deleteDatabase('volt_vfs_db_v1');
+          }
+          this.bus.publish('NOTIFICATION:ADD', { text: 'Systems wiped. Rebooting...', type: 'info' });
+          setTimeout(() => window.location.reload(), 1200);
+        }
       });
     }
   }

@@ -1,12 +1,12 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class CopyCommandModule implements ICommand {
   public readonly name = 'copy';
   public readonly aliases = ['cp'];
   public readonly description = 'Duplicates target files across the virtual disk.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],

@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { LanguageDetectionModule } from './LanguageDetectionModule';
 import { ExecutionEngineModule } from './ExecutionEngineModule';
 import { VFSModule } from '@modules/filesystem/VFSModule';
@@ -9,14 +9,14 @@ export interface IRunCommandController {
 }
 
 export class RunCommandController implements IRunCommandController {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private detector: LanguageDetectionModule;
   private engine: ExecutionEngineModule;
   private vfs?: VFSModule;
   private editor?: EditorModule;
 
   constructor(vfs?: VFSModule, editor?: EditorModule) {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
     this.detector = new LanguageDetectionModule();
     this.engine = new ExecutionEngineModule();
     this.vfs = vfs;
@@ -53,7 +53,7 @@ export class RunCommandController implements IRunCommandController {
           const codeFiles = entries.filter(e => {
             const l = e.name.toLowerCase();
             return (
-              l.endsWith('.cpp') || l.endsWith('.c') || l.endsWith('.py') || l.endsWith('.java')
+              l.endsWith('.cpp') || l.endsWith('.c') || l.endsWith('.py') || l.endsWith('.java') || l.endsWith('.js') || l.endsWith('.sh')
             );
           });
           if (codeFiles.length === 1) {
@@ -86,14 +86,14 @@ export class RunCommandController implements IRunCommandController {
     const detection = await this.detector.detect(entryPoint, cwd, this.vfs);
     if (detection.confidence === 'AMBIGUOUS' && detection.language === 'Text') {
       this.bus.publish('EXEC:STDERR_CHUNK', {
-        text: `[Re\`OS Auto-Detect] Cannot infer programming language for '${entryPoint}'.\n`
+        text: `[Volt Auto-Detect] Cannot infer programming language for '${entryPoint}'.\n`
       });
       return false;
     }
 
     const fileName = entryPoint.split('\\').pop() || entryPoint;
     this.bus.publish('EXEC:STDOUT_CHUNK', {
-      text: `[Re\`OS Auto-Detect] Running ${detection.language} project (Entry: ${fileName})...\n`
+      text: `[Volt Auto-Detect] Running ${detection.language} project (Entry: ${fileName})...\n`
     });
 
     const exitCode = await this.engine.spawnProcess(detection.language, entryPoint, this.vfs);

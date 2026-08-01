@@ -1,6 +1,6 @@
 export const SYSTEM_CONSTANTS = {
   VERSION: '1.0.0',
-  DEFAULT_CWD: 'C:\\Users\\ReOS',
+  DEFAULT_CWD: 'C:\\Users\\Volt',
   STORAGE_QUOTA_BYTES: 50 * 1024 * 1024, // 50 MB OPFS target
   BOOT_SEQUENCE_STEPS: [
     'Initializing...',
@@ -9,7 +9,7 @@ export const SYSTEM_CONSTANTS = {
     'Ready.'
   ] as const,
   SUPPORTED_THEMES: [
-    'Pure Black (Re`OS Default)',
+    'Pure Black (Volt Default)',
     'Classic CMD',
     'VS Code Dark+',
     'Matrix',

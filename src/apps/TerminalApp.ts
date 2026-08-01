@@ -24,7 +24,7 @@ export class TerminalApp {
         this.terminalEngine.mount(body);
 
         // Custom styling for inside a window
-        const wrapper = body.querySelector('.reos-terminal-wrapper') as HTMLElement;
+        const wrapper = body.querySelector('.volt-terminal-wrapper') as HTMLElement;
         if (wrapper) {
           wrapper.style.height = '100%';
           wrapper.style.padding = '12px';

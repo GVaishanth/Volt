@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class HelpCommandModule implements ICommand {
   public readonly name = 'help';
   public readonly aliases = ['?'];
   public readonly description =
     'Interactive system documentation engine displaying command syntax, description, and examples.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
   private getDispatcher: () => any;
 
   constructor(getDispatcher: () => any) {
@@ -22,7 +22,7 @@ export class HelpCommandModule implements ICommand {
     const dispatcher = this.getDispatcher();
     if (args.length === 0) {
       const allCommands: ICommand[] = dispatcher ? dispatcher.getAllCommands() : [];
-      let text = `Re\`OS — 100% Local-First Development Operating Environment\n\n`;
+      let text = `Volt — 100% Local-First Development Operating Environment\n\n`;
       text += `Available Commands:\n`;
       for (const cmd of allCommands.sort((a, b) => a.name.localeCompare(b.name))) {
         const aliasText = cmd.aliases.length > 0 ? ` (${cmd.aliases.join(', ')})` : '';

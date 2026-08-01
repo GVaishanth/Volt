@@ -1,5 +1,5 @@
 import { OSWindow } from '@core/WindowManager';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 interface DbTable {
   name: string;
@@ -8,7 +8,7 @@ interface DbTable {
 }
 
 export class DatabaseApp {
-  private bus = ReOSBus.getInstance();
+  private bus = VoltBus.getInstance();
   private tables: Map<string, DbTable> = new Map();
   private queryInput: string =
     'CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  name TEXT,\n  email TEXT\n);\n\nINSERT INTO users VALUES (1, "Alice", "alice@example.com");\nINSERT INTO users VALUES (2, "Bob", "bob@example.com");\n\nSELECT * FROM users;';

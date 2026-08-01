@@ -1,4 +1,4 @@
 export * from './Constants';
-export * from './ReOSBus';
+export * from './VoltBus';
 export * from './AppController';
 export * from './CapabilityProfiler';

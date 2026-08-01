@@ -8,7 +8,7 @@ self.onmessage = async (event: MessageEvent) => {
     self.postMessage({
       type: 'EXEC:STDOUT_CHUNK',
       payload: {
-        text: `[Re\`OS WebWorker] Launching Pyodide Python 3 WASM runtime for ${fileName}...\n`
+        text: `[Volt WebWorker] Launching Pyodide Python 3 WASM runtime for ${fileName}...\n`
       }
     });
 

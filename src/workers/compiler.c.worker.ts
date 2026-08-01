@@ -9,7 +9,7 @@ self.onmessage = async (event: MessageEvent) => {
     self.postMessage({
       type: 'EXEC:STDOUT_CHUNK',
       payload: {
-        text: `[Re\`OS WebWorker] Compiling ${fileName} (${language}) inside Clang/LLVM WASM engine...\n`
+        text: `[Volt WebWorker] Compiling ${fileName} (${language}) inside Clang/LLVM WASM engine...\n`
       }
     });
 

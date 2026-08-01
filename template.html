@@ -3,11 +3,227 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>in.nextWeb — Local-First Development Operating Environment</title>
+    <title>Volt — Local-First Development Operating Environment</title>
     <link rel="stylesheet" href="/src/styles/index.css" />
+    <style>
+      /* Cinematic Boot Loader Styles */
+      .volt-boot-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #000000;
+        color: #ffffff;
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Consolas', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+        overflow: hidden;
+        transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1), visibility 1s;
+      }
+
+      .volt-boot-loader.fade-out {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      /* Neon Edge Glowing Borders */
+      .loader-edges {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      .edge {
+        position: absolute;
+        box-shadow: 0 0 15px #00ff66, 0 0 30px #00ff66;
+      }
+
+      .edge-top {
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, #00ff66, transparent);
+        background-size: 200% 100%;
+        animation: edgeRunHorizontal 3s infinite linear;
+      }
+
+      .edge-bottom {
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, #00ff66, transparent);
+        background-size: 200% 100%;
+        animation: edgeRunHorizontal 3s infinite linear reverse;
+      }
+
+      .edge-left {
+        top: 0;
+        left: 0;
+        width: 3px;
+        height: 100%;
+        background: linear-gradient(180deg, transparent, #00ff66, transparent);
+        background-size: 100% 200%;
+        animation: edgeRunVertical 3s infinite linear;
+      }
+
+      .edge-right {
+        top: 0;
+        right: 0;
+        width: 3px;
+        height: 100%;
+        background: linear-gradient(180deg, transparent, #00ff66, transparent);
+        background-size: 100% 200%;
+        animation: edgeRunVertical 3s infinite linear reverse;
+      }
+
+      @keyframes edgeRunHorizontal {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+
+      @keyframes edgeRunVertical {
+        0% { background-position: 0 -200%; }
+        100% { background-position: 0 200%; }
+      }
+
+      /* Matrix Neon Grid lines on corners */
+      .loader-edges::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+          linear-gradient(rgba(0, 255, 102, 0.05) 1px, transparent 1px) 0 0 / 40px 40px,
+          linear-gradient(90deg, rgba(0, 255, 102, 0.05) 1px, transparent 1px) 0 0 / 40px 40px;
+        opacity: 0.4;
+      }
+
+      /* Content */
+      .loader-content {
+        text-align: center;
+        z-index: 10;
+        max-width: 90%;
+      }
+
+      .loader-sub {
+        font-size: 14px;
+        letter-spacing: 5px;
+        text-transform: uppercase;
+        color: #888888;
+        opacity: 0;
+        animation: fadeInText 0.8s forwards 0.1s;
+      }
+
+      .loader-title {
+        font-size: 72px;
+        font-weight: 900;
+        letter-spacing: 12px;
+        color: #00ff66;
+        text-shadow: 0 0 10px rgba(0, 255, 102, 0.6), 0 0 30px rgba(0, 255, 102, 0.8), 0 0 50px rgba(0, 255, 102, 1);
+        margin: 10px 0 20px 0;
+        opacity: 0;
+        animation: fadeInTitle 1.2s cubic-bezier(0.19, 1, 0.22, 1) forwards 0.3s, pulseGlow 2s infinite alternate 1.5s;
+      }
+
+      .loader-desc {
+        font-size: 14px;
+        color: #cccccc;
+        opacity: 0;
+        letter-spacing: 1.5px;
+        line-height: 1.6;
+        animation: fadeInText 1.0s forwards 0.7s;
+      }
+
+      .loader-bar-container {
+        width: 280px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        margin: 40px auto 15px auto;
+        overflow: hidden;
+        border: 1px solid rgba(0, 255, 102, 0.2);
+        opacity: 0;
+        animation: fadeInText 0.5s forwards 0.8s;
+      }
+
+      .loader-bar {
+        width: 0%;
+        height: 100%;
+        background: #00ff66;
+        box-shadow: 0 0 8px #00ff66;
+        animation: loadProgress 1.5s cubic-bezier(0.1, 0.8, 0.2, 1) forwards 0.9s;
+      }
+
+      .loader-status {
+        font-size: 11px;
+        color: #00ff66;
+        opacity: 0;
+        letter-spacing: 1.5px;
+        animation: flashText 1s infinite alternate, fadeInText 1s forwards 0.8s;
+        margin-top: 10px;
+      }
+
+      @keyframes fadeInText {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes fadeInTitle {
+        from { opacity: 0; transform: scale(0.9) translateY(10px); filter: blur(10px); }
+        to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+      }
+
+      @keyframes pulseGlow {
+        0% { text-shadow: 0 0 10px rgba(0, 255, 102, 0.6), 0 0 20px rgba(0, 255, 102, 0.4); }
+        100% { text-shadow: 0 0 15px rgba(0, 255, 102, 0.8), 0 0 35px rgba(0, 255, 102, 0.7), 0 0 55px rgba(0, 255, 102, 0.9); }
+      }
+
+      @keyframes loadProgress {
+        0% { width: 0%; }
+        20% { width: 15%; }
+        45% { width: 55%; }
+        75% { width: 85%; }
+        100% { width: 100%; }
+      }
+
+      @keyframes flashText {
+        0% { opacity: 0.3; }
+        100% { opacity: 0.9; }
+      }
+    </style>
   </head>
   <body class="theme-pure-black">
-    <div id="reos-viewport"></div>
+    <!-- Cinematic Boot Loader -->
+    <div id="volt-boot-loader" class="volt-boot-loader">
+      <div class="loader-edges">
+        <div class="edge edge-top"></div>
+        <div class="edge edge-bottom"></div>
+        <div class="edge edge-left"></div>
+        <div class="edge edge-right"></div>
+      </div>
+      <div class="loader-content">
+        <div class="loader-sub">VPU presents</div>
+        <div class="loader-title">VOLT</div>
+        <div class="loader-desc">A modern desktop environment built entirely for the web.</div>
+        <div class="loader-bar-container">
+          <div class="loader-bar"></div>
+        </div>
+        <div class="loader-status">Initializing virtual registers...</div>
+      </div>
+    </div>
+
+    <div id="volt-viewport"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

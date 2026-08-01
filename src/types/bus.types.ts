@@ -1,6 +1,7 @@
-export type ReOSEventType =
+export type VoltEventType =
   | 'APP:BOOT_START'
   | 'APP:BOOT_COMPLETE'
+  | 'APP:LAUNCH'
   | 'CMD:SUBMIT'
   | 'CMD:EXECUTE'
   | 'CMD:CLEAR'
@@ -59,10 +60,10 @@ export type ReOSEventType =
   | 'CMD:PALETTE_TOGGLE'
   | 'NOTIFICATION:ADD';
 
-export interface IReOSEvent<T = unknown> {
-  type: ReOSEventType;
+export interface IVoltEvent<T = unknown> {
+  type: VoltEventType;
   payload?: T;
   timestamp: number;
 }
 
-export type EventCallback<T = any> = (event: IReOSEvent<T>) => void;
+export type EventCallback<T = any> = (event: IVoltEvent<T>) => void;

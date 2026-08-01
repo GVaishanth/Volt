@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { CompilerRuntimeModule } from './CompilerRuntimeModule';
 import { SupportedLanguage } from '@types';
 import { VFSModule } from '@modules/filesystem/VFSModule';
@@ -22,7 +22,7 @@ interface VMSession {
 }
 
 export class ExecutionEngineModule implements IExecutionEngineModule {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private compilerRuntime: CompilerRuntimeModule;
   private activeWorker: Worker | null = null;
   private sharedInputBuffer: SharedArrayBuffer | null = null;
@@ -31,7 +31,7 @@ export class ExecutionEngineModule implements IExecutionEngineModule {
   private activeVMSession: VMSession | null = null;
 
   constructor() {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
     this.compilerRuntime = new CompilerRuntimeModule();
 
     this.bus.subscribe('EXEC:STDIN_RESPONSE', event => {
@@ -61,14 +61,8 @@ export class ExecutionEngineModule implements IExecutionEngineModule {
       return 1;
     }
 
-    // For deterministic VM we allow execution even without WASM/Worker support.
-    // Only hard-abort if both Worker is missing and we are in a truly unsupported env.
-    // In tests and file:// protocol, proceed.
     if (!this.compilerRuntime.isSupportedLocally(language)) {
-      // Still allow our lightweight VM – emit a soft warning but don't abort.
-      // If browser truly lacks Workers AND we wanted real Pyodide, we'd abort,
-      // but interactive VM works everywhere.
-      // console.debug('Browser lacks workers, continuing with VM fallback');
+      // Soft warning
     }
 
     let sourceCode = '';
@@ -85,6 +79,75 @@ export class ExecutionEngineModule implements IExecutionEngineModule {
 
     this.processRunning = true;
     this.bus.publish('EXEC:STATUS_UPDATE', { status: 'Running...', language });
+
+    const fileName = entryPoint.split('\\').pop() || entryPoint;
+
+    // --- NEW: JAVASCRIPT EXECUTION MOTOR (5TH LANGUAGE) ---
+    if (language === 'JavaScript') {
+      this.bus.publish('EXEC:STDOUT_CHUNK', {
+        text: `[Volt V8 JS Engine] Executing ${fileName}...\n`
+      });
+
+      const customConsole = {
+        log: (...args: any[]) => {
+          this.bus.publish('EXEC:STDOUT_CHUNK', {
+            text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') + '\n'
+          });
+        },
+        error: (...args: any[]) => {
+          this.bus.publish('EXEC:STDERR_CHUNK', {
+            text: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') + '\n'
+          });
+        },
+        warn: (...args: any[]) => {
+          this.bus.publish('EXEC:STDOUT_CHUNK', {
+            text: '[Warn] ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') + '\n'
+          });
+        }
+      };
+
+      try {
+        const sandboxFunc = new Function('console', 'prompt', 'alert', `
+          try {
+            ${sourceCode}
+          } catch (err) {
+            console.error(err.message || err);
+          }
+        `);
+        sandboxFunc(customConsole, prompt.bind(window), alert.bind(window));
+        this.processRunning = false;
+        this.bus.publish('EXEC:STATUS_UPDATE', { status: 'Ready', language });
+        return 0;
+      } catch (err: any) {
+        this.bus.publish('EXEC:STDERR_CHUNK', { text: `[JS Compilation Exception] ${err.message || err}\n` });
+        this.processRunning = false;
+        this.bus.publish('EXEC:STATUS_UPDATE', { status: 'Ready', language });
+        return 1;
+      }
+    }
+
+    // --- NEW: BASH SHELL EXECUTOR (6TH LANGUAGE) ---
+    if (language === 'Bash') {
+      this.bus.publish('EXEC:STDOUT_CHUNK', {
+        text: `[Volt Bash Shell] Executing script ${fileName}...\n`
+      });
+
+      const lines = sourceCode.split('\n');
+      void (async () => {
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) continue;
+
+          this.bus.publish('EXEC:STDOUT_CHUNK', { text: `volt$ ${trimmed}\n` });
+          this.bus.publish('CMD:SUBMIT', { command: trimmed });
+          // Introduce a realistic delay between script lines to let the async command dispatch complete
+          await new Promise(r => setTimeout(r, 450));
+        }
+        this.processRunning = false;
+        this.bus.publish('EXEC:STATUS_UPDATE', { status: 'Ready', language });
+      })();
+      return 0;
+    }
 
     return new Promise(resolve => {
       this.runInteractiveVM(language, entryPoint, sourceCode, resolve);
@@ -165,15 +228,15 @@ export class ExecutionEngineModule implements IExecutionEngineModule {
     const fileName = entryPoint.split('\\').pop() || entryPoint;
     if (language === 'Python') {
       this.bus.publish('EXEC:STDOUT_CHUNK', {
-        text: `[Re\`OS Pyodide WASM Engine] Executing ${fileName}...\n`
+        text: `[Volt Pyodide WASM Engine] Executing ${fileName}...\n`
       });
     } else if (language === 'C' || language === 'C++') {
       this.bus.publish('EXEC:STDOUT_CHUNK', {
-        text: `[Re\`OS Local-First ${language} Compiler Engine] Compiling & Running ${fileName}...\n`
+        text: `[Volt Local-First ${language} Compiler Engine] Compiling & Running ${fileName}...\n`
       });
     } else if (language === 'Java') {
       this.bus.publish('EXEC:STDOUT_CHUNK', {
-        text: `[Re\`OS CheerpJ JVM Engine] Executing ${fileName}...\n`
+        text: `[Volt CheerpJ JVM Engine] Executing ${fileName}...\n`
       });
     }
 

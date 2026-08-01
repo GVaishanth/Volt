@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { VFSModule } from '@modules/filesystem/VFSModule';
 import { ExecutionEngineModule } from '@modules/execution/ExecutionEngineModule';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
-describe('ReOS ExecutionEngine Interactive VM', () => {
+describe('Volt ExecutionEngine Interactive VM', () => {
   let vfs: VFSModule;
-  let bus: ReOSBus;
+  let bus: VoltBus;
 
   beforeEach(async () => {
     // Reset bus listeners by clearing internal map via hack (singleton)
-    bus = ReOSBus.getInstance();
+    bus = VoltBus.getInstance();
     (bus as unknown as { listeners: Map<unknown, unknown> }).listeners = new Map();
 
     vfs = new VFSModule();
@@ -69,7 +69,7 @@ describe('ReOS ExecutionEngine Interactive VM', () => {
 
   it('Python: adult branch should only print adult message', async () => {
     const code = `
-name = input("Enter your name for ReOS test: ")
+name = input("Enter your name for Volt test: ")
 age = int(input("Enter your age: "))
 
 if age >= 18:
@@ -78,11 +78,11 @@ else:
     print(f"Restricted Access for {name} (Minor: {age} yrs)")
 `.trim();
 
-    await vfs.writeFile('C:\\Users\\ReOS\\test_adult.py', code);
+    await vfs.writeFile('C:\\Users\\Volt\\test_adult.py', code);
 
     const cap = captureExecution(['Alice', '25']);
     const engine = new ExecutionEngineModule();
-    const exit = await engine.spawnProcess('Python', 'C:\\Users\\ReOS\\test_adult.py', vfs);
+    const exit = await engine.spawnProcess('Python', 'C:\\Users\\Volt\\test_adult.py', vfs);
     cap.cleanup();
 
     const allOut = cap.stdout.join('');
@@ -95,7 +95,7 @@ else:
 
   it('Python: minor branch should only print minor message', async () => {
     const code = `
-name = input("Enter your name for ReOS test: ")
+name = input("Enter your name for Volt test: ")
 age = int(input("Enter your age: "))
 
 if age >= 18:
@@ -103,10 +103,10 @@ if age >= 18:
 else:
     print(f"Restricted Access for {name} (Minor: {age} yrs)")
 `.trim();
-    await vfs.writeFile('C:\\Users\\ReOS\\test_minor.py', code);
+    await vfs.writeFile('C:\\Users\\Volt\\test_minor.py', code);
     const cap = captureExecution(['Bob', '12']);
     const engine = new ExecutionEngineModule();
-    const exit = await engine.spawnProcess('Python', 'C:\\Users\\ReOS\\test_minor.py', vfs);
+    const exit = await engine.spawnProcess('Python', 'C:\\Users\\Volt\\test_minor.py', vfs);
     cap.cleanup();
     const allOut = cap.stdout.join('');
     expect(exit).toBe(0);
@@ -117,13 +117,13 @@ else:
   it('Python: print with concatenation should not crash', async () => {
     const code = `
 import sys
-print("ReOS Local Python Runtime - Python " + sys.version.split()[0])
+print("Volt Local Python Runtime - Python " + sys.version.split()[0])
 print("Hello World")
 `.trim();
-    await vfs.writeFile('C:\\Users\\ReOS\\test_concat.py', code);
+    await vfs.writeFile('C:\\Users\\Volt\\test_concat.py', code);
     const cap = captureExecution([]);
     const engine = new ExecutionEngineModule();
-    const exit = await engine.spawnProcess('Python', 'C:\\Users\\ReOS\\test_concat.py', vfs);
+    const exit = await engine.spawnProcess('Python', 'C:\\Users\\Volt\\test_concat.py', vfs);
     cap.cleanup();
     const allOut = cap.stdout.join('');
     expect(exit).toBe(0);
@@ -137,25 +137,25 @@ print("Hello World")
 #include <string>
 int main() {
     std::string name;
-    std::cout << "Enter your name for ReOS C++ test: ";
+    std::cout << "Enter your name for Volt C++ test: ";
     std::cin >> name;
     if (name == "Admin" || name == "Engineer") {
         std::cout << "Welcome Admin! High privileges active." << std::endl;
     } else {
-        std::cout << "Welcome to ReOS C++ Engine, " << name << "!" << std::endl;
+        std::cout << "Welcome to Volt C++ Engine, " << name << "!" << std::endl;
     }
     return 0;
 }
 `.trim();
-    await vfs.writeFile('C:\\Users\\ReOS\\test_admin.cpp', code);
+    await vfs.writeFile('C:\\Users\\Volt\\test_admin.cpp', code);
     const cap = captureExecution(['Admin']);
     const engine = new ExecutionEngineModule();
-    const exit = await engine.spawnProcess('C++', 'C:\\Users\\ReOS\\test_admin.cpp', vfs);
+    const exit = await engine.spawnProcess('C++', 'C:\\Users\\Volt\\test_admin.cpp', vfs);
     cap.cleanup();
     const allOut = cap.stdout.join('');
     expect(exit).toBe(0);
     expect(allOut).toContain('Welcome Admin! High privileges active.');
-    expect(allOut).not.toContain('Welcome to ReOS C++ Engine');
+    expect(allOut).not.toContain('Welcome to Volt C++ Engine');
   });
 
   it('C++: non-admin branch', async () => {
@@ -164,24 +164,24 @@ int main() {
 #include <string>
 int main() {
     std::string name;
-    std::cout << "Enter your name for ReOS C++ test: ";
+    std::cout << "Enter your name for Volt C++ test: ";
     std::cin >> name;
     if (name == "Admin" || name == "Engineer") {
         std::cout << "Welcome Admin! High privileges active." << std::endl;
     } else {
-        std::cout << "Welcome to ReOS C++ Engine, " << name << "!" << std::endl;
+        std::cout << "Welcome to Volt C++ Engine, " << name << "!" << std::endl;
     }
     return 0;
 }
 `.trim();
-    await vfs.writeFile('C:\\Users\\ReOS\\test_user.cpp', code);
+    await vfs.writeFile('C:\\Users\\Volt\\test_user.cpp', code);
     const cap = captureExecution(['Bob']);
     const engine = new ExecutionEngineModule();
-    const exit = await engine.spawnProcess('C++', 'C:\\Users\\ReOS\\test_user.cpp', vfs);
+    const exit = await engine.spawnProcess('C++', 'C:\\Users\\Volt\\test_user.cpp', vfs);
     cap.cleanup();
     const allOut = cap.stdout.join('');
     expect(exit).toBe(0);
-    expect(allOut).toContain('Welcome to ReOS C++ Engine, Bob!');
+    expect(allOut).toContain('Welcome to Volt C++ Engine, Bob!');
     expect(allOut).not.toContain('High privileges active');
   });
 
@@ -190,7 +190,7 @@ int main() {
 import java.util.Scanner;
 public class Main {
     public static void main(String[] args) {
-        System.out.println("ReOS Java JVM Execution inside WebAssembly!");
+        System.out.println("Volt Java JVM Execution inside WebAssembly!");
         Scanner scanner = new Scanner(System.in);
         System.out.print("Enter username: ");
         String user = scanner.nextLine();
@@ -198,10 +198,10 @@ public class Main {
     }
 }
 `.trim();
-    await vfs.writeFile('C:\\Users\\ReOS\\TestJava.java', code);
+    await vfs.writeFile('C:\\Users\\Volt\\TestJava.java', code);
     const cap = captureExecution(['Charlie']);
     const engine = new ExecutionEngineModule();
-    const exit = await engine.spawnProcess('Java', 'C:\\Users\\ReOS\\TestJava.java', vfs);
+    const exit = await engine.spawnProcess('Java', 'C:\\Users\\Volt\\TestJava.java', vfs);
     cap.cleanup();
     const allOut = cap.stdout.join('');
     expect(exit).toBe(0);

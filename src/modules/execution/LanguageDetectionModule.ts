@@ -26,6 +26,12 @@ export class LanguageDetectionModule implements ILanguageDetectionModule {
     if (lower.endsWith('.java')) {
       return { language: 'Java', confidence: 'HIGH', entryPoint: targetPath, dependencies: [] };
     }
+    if (lower.endsWith('.js') || lower.endsWith('.jsx')) {
+      return { language: 'JavaScript', confidence: 'HIGH', entryPoint: targetPath, dependencies: [] };
+    }
+    if (lower.endsWith('.sh') || lower.endsWith('.bash')) {
+      return { language: 'Bash', confidence: 'HIGH', entryPoint: targetPath, dependencies: [] };
+    }
 
     // Step 1: Read content and ignore blank lines
     let content = '';

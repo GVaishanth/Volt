@@ -17,9 +17,9 @@ export interface IStorageAdapterModule {
   > | null>;
 }
 
-const IDB_DB_NAME = 'reos_vfs_db_v1';
+const IDB_DB_NAME = 'volt_vfs_db_v1';
 const IDB_STORE_NAME = 'files_store';
-const LOCAL_STORAGE_KEY = 'reos_vfs_file_storage_v1';
+const LOCAL_STORAGE_KEY = 'volt_vfs_file_storage_v1';
 
 export class StorageAdapterModule implements IStorageAdapterModule {
   private hasOPFS: boolean = false;
@@ -33,19 +33,10 @@ export class StorageAdapterModule implements IStorageAdapterModule {
       return true;
     }
 
-    try {
-      if (
-        typeof navigator !== 'undefined' &&
-        navigator.storage &&
-        typeof navigator.storage.getDirectory === 'function'
-      ) {
-        this.rootDir = await navigator.storage.getDirectory();
-        this.hasOPFS = true;
-        return true;
-      }
-    } catch {
-      this.hasOPFS = false;
-    }
+    // Prioritize IndexedDB on HTTPS to guarantee 100% cross-browser compatibility
+    // and prevent main-thread OPFS createWritable SecurityErrors in Safari, Firefox, and strict sandboxed environments
+    this.hasOPFS = false;
+    this.rootDir = null;
     return true;
   }
 
@@ -209,6 +200,12 @@ export class StorageAdapterModule implements IStorageAdapterModule {
       return this.loadFromLocalStorage();
     }
     return new Promise(resolve => {
+      // Add a 1-second deadlock timeout to prevent boot hangs!
+      const timer = setTimeout(() => {
+        console.warn("IndexedDB load timed out. Falling back to localStorage.");
+        resolve(this.loadFromLocalStorage());
+      }, 1000);
+
       try {
         const request = indexedDB.open(IDB_DB_NAME, 1);
         request.onupgradeneeded = () => {
@@ -218,6 +215,7 @@ export class StorageAdapterModule implements IStorageAdapterModule {
           }
         };
         request.onsuccess = () => {
+          clearTimeout(timer);
           const db = request.result;
           try {
             const tx = db.transaction(IDB_STORE_NAME, 'readonly');
@@ -255,8 +253,12 @@ export class StorageAdapterModule implements IStorageAdapterModule {
             resolve(this.loadFromLocalStorage());
           }
         };
-        request.onerror = () => resolve(this.loadFromLocalStorage());
+        request.onerror = () => {
+          clearTimeout(timer);
+          resolve(this.loadFromLocalStorage());
+        };
       } catch {
+        clearTimeout(timer);
         resolve(this.loadFromLocalStorage());
       }
     });

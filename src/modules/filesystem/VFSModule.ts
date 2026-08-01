@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { IVFSNodeMetadata } from '@types';
 import { StorageAdapterModule } from './StorageAdapterModule';
 
@@ -38,15 +38,15 @@ interface InternalVFSNode {
 }
 
 export class VFSModule implements IVFSModule {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private storageAdapter: StorageAdapterModule;
-  private cwd: string = 'C:\\Users\\ReOS';
+  private cwd: string = 'C:\\Users\\Volt';
   private nodes: Map<string, InternalVFSNode> = new Map();
   private initialized: boolean = false;
   private adminUnlocked: boolean = false;
 
   constructor() {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
     this.storageAdapter = new StorageAdapterModule();
   }
 
@@ -54,7 +54,7 @@ export class VFSModule implements IVFSModule {
     if (this.initialized) return;
     await this.storageAdapter.init();
 
-    this.nodes.set('c:\\\\', {
+    this.nodes.set('c:', {
       name: 'C:',
       path: 'C:\\',
       type: 'directory',
@@ -62,7 +62,7 @@ export class VFSModule implements IVFSModule {
       createdAt: Date.now(),
       modifiedAt: Date.now()
     });
-    this.nodes.set('c:\\\\users', {
+    this.nodes.set('c:\\users', {
       name: 'Users',
       path: 'C:\\Users',
       type: 'directory',
@@ -70,9 +70,9 @@ export class VFSModule implements IVFSModule {
       createdAt: Date.now(),
       modifiedAt: Date.now()
     });
-    this.nodes.set('c:\\\\users\\\\reos', {
-      name: 'ReOS',
-      path: 'C:\\Users\\ReOS',
+    this.nodes.set('c:\\users\\volt', {
+      name: 'Volt',
+      path: 'C:\\Users\\Volt',
       type: 'directory',
       size: 0,
       createdAt: Date.now(),
@@ -80,24 +80,40 @@ export class VFSModule implements IVFSModule {
     });
 
     // Always create default filesystem first, then overlay saved files
-    await this.createDefaultFilesystem();
+    try {
+      await this.createDefaultFilesystem();
+    } catch (err) {
+      console.error("Error creating default filesystem:", err);
+    }
 
-    const saved = await this.storageAdapter.loadVFSState();
-
-    if (saved && saved.size > 0) {
-      for (const [path, data] of saved.entries()) {
-        const norm = this.normalizePath(path);
-        this.ensureParentDirs(norm);
-        this.nodes.set(norm.toLowerCase(), {
-          name: norm.split('\\').pop()!,
-          path: norm,
-          type: 'file',
-          content: data.content,
-          size: new Blob([data.content]).size,
-          createdAt: data.createdAt,
-          modifiedAt: data.modifiedAt
-        });
+    try {
+      // Clear legacy storage keys only if there is a detected V1 keys pattern, preventing boot locks
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('volt_vfs_file_storage_v1') === null) {
+        localStorage.clear();
       }
+
+      const saved = await this.storageAdapter.loadVFSState();
+
+      if (saved && saved.size > 0) {
+        for (const [path, data] of saved.entries()) {
+          const norm = this.normalizePath(path);
+          this.ensureParentDirs(norm);
+          this.nodes.set(norm.toLowerCase(), {
+            name: norm.split('\\').pop()!,
+            path: norm,
+            type: 'file',
+            content: data.content,
+            size: new Blob([data.content]).size,
+            createdAt: data.createdAt,
+            modifiedAt: data.modifiedAt
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Incompatible local storage state detected. Gracefully resetting to default workspace.", err);
+      try {
+        localStorage.clear();
+      } catch { /* ignore */ }
     }
 
     this.initialized = true;
@@ -116,11 +132,11 @@ export class VFSModule implements IVFSModule {
       'C:\\Recycle Bin',
 
       // User folders
-      'C:\\Users\\ReOS\\Desktop',
-      'C:\\Users\\ReOS\\Documents',
-      'C:\\Users\\ReOS\\Downloads',
-      'C:\\Users\\ReOS\\Pictures',
-      'C:\\Users\\ReOS\\Projects',
+      'C:\\Users\\Volt\\Desktop',
+      'C:\\Users\\Volt\\Documents',
+      'C:\\Users\\Volt\\Downloads',
+      'C:\\Users\\Volt\\Pictures',
+      'C:\\Users\\Volt\\Projects',
 
       // Protected Admin folder
       'C:\\Admin'
@@ -157,10 +173,10 @@ export class VFSModule implements IVFSModule {
 
     // === DEFAULT DOCUMENTATION FILES ===
     await this.writeFile(
-      'C:\\Users\\ReOS\\README.txt',
-      `Welcome to Re\`OS!
+      'C:\\Users\\Volt\\README.txt',
+      `Welcome to Volt!
 
-Re\`OS is a 100% local-first, browser-native development operating environment.
+Volt is a 100% local-first, browser-native development operating environment.
 
 Features:
 • 70% Windows Command Prompt (Terminal)
@@ -173,10 +189,10 @@ Version: 1.0.0`
     );
 
     await this.writeFile(
-      'C:\\Users\\ReOS\\How To Use Re-OS.txt',
-      `How To Use Re-OS
+      'C:\\Users\\Volt\\How To Use Volt.txt',
+      `How To Use Volt
 
-Welcome to Re\`OS — a browser-based development operating system.
+Welcome to Volt — a browser-based development operating system.
 
 BASIC TERMINAL COMMANDS
   dir / ls          List files and folders
@@ -220,32 +236,183 @@ TIPS
 
     // === SAMPLE CODE FILES ===
     await this.writeFile(
-      'C:\\Users\\ReOS\\hello.py',
-      `print("Welcome to Re\`OS Python Runtime")
+      'C:\\Users\\Volt\\hello.py',
+      `print("Welcome to Volt Python Runtime")
 name = input("Enter your name: ")
 print(f"Hello, {name}!")`
     );
 
     await this.writeFile(
-      'C:\\Users\\ReOS\\main.cpp',
+      'C:\\Users\\Volt\\main.cpp',
       `#include <iostream>
 int main() {
-    std::cout << "Hello from C++ in Re\`OS!" << std::endl;
+    std::cout << "Hello from C++ in Volt!" << std::endl;
     return 0;
 }`
     );
 
     await this.writeFile(
-      'C:\\Users\\ReOS\\Main.java',
+      'C:\\Users\\Volt\\Main.java',
       `public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello from Java in Re\`OS!");
+        System.out.println("Hello from Java in Volt!");
     }
 }`
     );
 
+    // === POPULATE DESKTOP & TUTORIAL DIRECTORIES ===
+    await this.mkdir('C:\\Users\\Volt\\Desktop\\Tutorial');
+    await this.mkdir('C:\\Users\\Volt\\Projects\\Tutorial');
+
+    await this.writeFile(
+      'C:\\Users\\Volt\\Desktop\\Welcome to Volt.txt',
+      `Welcome to your VOLT Desktop!
+
+This folder represents the files visible on your main Desktop background interface and inside your active File Explorer.
+
+Feel free to write code, create directories, upload your local photos, or customize the background wallpaper settings!
+
+Volt System Version: 2.0.0`
+    );
+
+    await this.writeFile(
+      'C:\\Users\\Volt\\Desktop\\Quickstart.txt',
+      `Volt Quickstart Guide
+
+1. Press Space + T to open the terminal.
+2. Type 'dir' to list directories.
+3. CD into 'Desktop\\Tutorial' or 'Projects\\Tutorial' to find sample codes!
+4. Run 'run hello.py' to compile and execute the python script with interactive stdin loops.
+5. Double-click the custom SVGs inside Pictures/ folder to set them as your custom glowing background wallpapers!
+
+Have fun development browser-first and local-first!`
+    );
+
+    const tutorialPy = `print("Welcome to the VOLT Coding Tutorial!")
+name = input("Enter your name: ")
+print(f"Excellent, {name}! You have successfully compiled and executed Python inside WebAssembly!")`;
+
+    const tutorialCpp = `#include <iostream>
+int main() {
+    std::cout << "Welcome to the VOLT C++ Coding Tutorial!" << std::endl;
+    std::cout << "Successfully compiled with Clang inside Web Worker!" << std::endl;
+    return 0;
+}`;
+
+    const tutorialJava = `public class Main {
+    public static void main(String[] args) {
+        System.out.println("Welcome to the VOLT Java JVM Tutorial!");
+        System.out.println("Successfully executed on WebAssembly JVM!");
+    }
+}`;
+
+    const tutorialJs = `console.log("Welcome to the VOLT JavaScript Tutorial!");
+console.log("This script is running natively inside Volt's browser V8 engine.");
+let age = prompt("How many years have you been writing JavaScript?");
+console.log("Wow, " + age + " years is a long time! Keep up the great work!");`;
+
+    const tutorialSh = `# VOLT Bash Scripting Tutorial
+echo "Starting local VOLT automation script..."
+sysinfo
+recent
+echo "Shell script execution complete!"`;
+
+    // Write to Desktop Tutorial
+    await this.writeFile('C:\\Users\\Volt\\Desktop\\Tutorial\\hello.py', tutorialPy);
+    await this.writeFile('C:\\Users\\Volt\\Desktop\\Tutorial\\main.cpp', tutorialCpp);
+    await this.writeFile('C:\\Users\\Volt\\Desktop\\Tutorial\\Main.java', tutorialJava);
+    await this.writeFile('C:\\Users\\Volt\\Desktop\\Tutorial\\hello.js', tutorialJs);
+    await this.writeFile('C:\\Users\\Volt\\Desktop\\Tutorial\\script.sh', tutorialSh);
+
+    // Write to Projects Tutorial
+    await this.writeFile('C:\\Users\\Volt\\Projects\\Tutorial\\hello.py', tutorialPy);
+    await this.writeFile('C:\\Users\\Volt\\Projects\\Tutorial\\main.cpp', tutorialCpp);
+    await this.writeFile('C:\\Users\\Volt\\Projects\\Tutorial\\Main.java', tutorialJava);
+    await this.writeFile('C:\\Users\\Volt\\Projects\\Tutorial\\hello.js', tutorialJs);
+    await this.writeFile('C:\\Users\\Volt\\Projects\\Tutorial\\script.sh', tutorialSh);
+
+    // === SEED DEFAULT SVG WALLPAPERS ===
+    await this.writeFile(
+      'C:\\Users\\Volt\\Pictures\\Volt-Futuristic.svg',
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05020c"/>
+      <stop offset="50%" stop-color="#15102a"/>
+      <stop offset="100%" stop-color="#030107"/>
+    </linearGradient>
+    <linearGradient id="neon" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00ff66"/>
+      <stop offset="100%" stop-color="#00ffff"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g stroke="rgba(0, 255, 102, 0.15)" stroke-width="2" fill="none">
+    <path d="M 100,100 L 400,100 L 500,200 L 1000,200"/>
+    <path d="M 1800,900 L 1500,900 L 1400,800 L 900,800"/>
+    <circle cx="500" cy="200" r="6" fill="#00ff66"/>
+    <circle cx="1400" cy="800" r="6" fill="#00ffff"/>
+  </g>
+  <path d="M 960,350 L 900,550 L 980,550 L 920,800 L 1020,500 L 940,500 Z" fill="url(#neon)" filter="url(#glow)"/>
+  <text x="960" y="250" font-family="Consolas, monospace" font-size="28" font-weight="bold" fill="#888" letter-spacing="8" text-anchor="middle">VPU PRESENTS</text>
+  <text x="960" y="900" font-family="Consolas, monospace" font-size="34" font-weight="bold" fill="#fff" letter-spacing="2" text-anchor="middle">VOLT — Browser-Native OS</text>
+  <text x="960" y="950" font-family="Consolas, monospace" font-size="20" fill="#00ff66" letter-spacing="4" text-anchor="middle">Local-First | Client-Side | Secure Sandbox</text>
+</svg>`
+    );
+
+    await this.writeFile(
+      'C:\\Users\\Volt\\Pictures\\Volt-Minimalist.svg',
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#12131C"/>
+      <stop offset="100%" stop-color="#1E2030"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="960" cy="540" r="180" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="4"/>
+  <path d="M 960,400 L 910,550 L 970,550 L 930,730 L 1010,510 L 950,510 Z" fill="#00ff66" filter="url(#glow)"/>
+  <text x="960" y="320" font-family="Consolas, monospace" font-size="24" font-weight="bold" fill="#00ff66" letter-spacing="10" text-anchor="middle">VPU PRESENTS</text>
+  <text x="960" y="830" font-family="Consolas, monospace" font-size="48" font-weight="900" fill="#fff" letter-spacing="8" text-anchor="middle">VOLT</text>
+  <text x="960" y="890" font-family="Consolas, monospace" font-size="18" fill="#888" letter-spacing="2" text-anchor="middle">A modern desktop environment built entirely for the web.</text>
+</svg>`
+    );
+
+    await this.writeFile(
+      'C:\\Users\\Volt\\Pictures\\Volt-Cyberpunk.svg',
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <rect width="1920" height="1080" fill="#000000"/>
+  <defs>
+    <linearGradient id="cyan-pink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe"/>
+      <stop offset="100%" stop-color="#4facfe"/>
+    </linearGradient>
+    <filter id="neon-glow">
+      <feGaussianBlur stdDeviation="15" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Cyber grid -->
+  <path d="M 0,540 H 1920" stroke="rgba(0, 242, 254, 0.08)" stroke-width="2"/>
+  <path d="M 960,0 V 1080" stroke="rgba(0, 242, 254, 0.08)" stroke-width="2"/>
+  <rect x="760" y="340" width="400" height="400" fill="none" stroke="url(#cyan-pink)" stroke-width="4" filter="url(#neon-glow)" rx="20"/>
+  <path d="M 960,420 L 920,540 L 970,540 L 940,680 L 1000,510 L 950,510 Z" fill="#ff007f" filter="url(#neon-glow)"/>
+  <text x="960" y="270" font-family="Consolas, monospace" font-size="28" font-weight="bold" fill="#ff007f" letter-spacing="12" text-anchor="middle" filter="url(#neon-glow)">VPU PRESENTS</text>
+  <text x="960" y="820" font-family="Consolas, monospace" font-size="54" font-weight="900" fill="#00f2fe" letter-spacing="15" text-anchor="middle" filter="url(#neon-glow)">VOLT</text>
+  <text x="960" y="880" font-family="Consolas, monospace" font-size="20" fill="#ffffff" letter-spacing="3" text-anchor="middle">LOCAL-FIRST browser-native workstation</text>
+</svg>`
+    );
+
     // Make README read-only
-    const readmeNode = this.nodes.get('c:\\\\users\\\\reos\\\\readme.txt');
+    const readmeNode = this.nodes.get('c:\\users\\volt\\readme.txt');
     if (readmeNode) readmeNode.readOnly = true;
   }
 
@@ -268,11 +435,16 @@ int main() {
     const target = this.normalizePath(path || this.cwd).toLowerCase();
     const prefix = target + (target.endsWith('\\') ? '' : '\\');
     const results: IVFSNodeMetadata[] = [];
+    const isReadingRecycleBin = target.startsWith('c:\\recycle bin');
 
     for (const [key, node] of this.nodes.entries()) {
       if (key === target) continue;
       if (key.startsWith(prefix) && !key.substring(prefix.length).includes('\\')) {
-        if (node.inRecycleBin) continue;
+        if (isReadingRecycleBin) {
+          if (!node.inRecycleBin) continue;
+        } else {
+          if (node.inRecycleBin) continue;
+        }
         results.push({
           name: node.name,
           path: node.path,
@@ -450,20 +622,12 @@ int main() {
   }
 
   private ensureParentDirs(path: string): void {
-    const parts = path.split('\\');
-    let curr = parts[0] + '\\';
-    if (!this.nodes.has(curr.toLowerCase())) {
-      this.nodes.set(curr.toLowerCase(), {
-        name: parts[0] + '\\',
-        path: curr,
-        type: 'directory',
-        size: 0,
-        createdAt: Date.now(),
-        modifiedAt: Date.now()
-      });
-    }
+    const parts = path.split('\\').filter(Boolean);
+    if (parts.length <= 1) return; // Nothing to ensure above root drive
+
+    let curr = parts[0]; // e.g. "C:"
     for (let i = 1; i < parts.length - 1; i++) {
-      curr += parts[i] + '\\';
+      curr += '\\' + parts[i];
       const key = curr.toLowerCase();
       if (!this.nodes.has(key)) {
         this.nodes.set(key, {

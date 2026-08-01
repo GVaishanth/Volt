@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { StorageAdapterModule } from '@modules/filesystem/StorageAdapterModule';
 
 export interface IStatusBarTelemetry {
@@ -17,7 +17,7 @@ export interface IStatusBarModule {
 }
 
 export class StatusBarModule implements IStatusBarModule {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private storageAdapter: StorageAdapterModule;
   private container?: HTMLElement;
   private telemetry: IStatusBarTelemetry = {
@@ -30,7 +30,7 @@ export class StatusBarModule implements IStatusBarModule {
   };
 
   constructor() {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
     this.storageAdapter = new StorageAdapterModule();
 
     this.bus.subscribe('EXEC:STATUS_UPDATE', event => {
@@ -87,15 +87,15 @@ export class StatusBarModule implements IStatusBarModule {
     if (!this.container) return;
     const { status, language, cursor, indentation, encoding, storageReport } = this.telemetry;
     this.container.innerHTML = `
-      <div class="reos-status-item reos-status-status">
-        <span class="reos-status-dot ${status === 'Ready' ? 'ready' : 'active'}"></span>
+      <div class="volt-status-item volt-status-status">
+        <span class="volt-status-dot ${status === 'Ready' ? 'ready' : 'active'}"></span>
         <span>${status}</span>
       </div>
-      <div class="reos-status-item">${language}</div>
-      <div class="reos-status-item">Ln ${cursor.line}, Col ${cursor.column}</div>
-      <div class="reos-status-item">${indentation}</div>
-      <div class="reos-status-item">${encoding}</div>
-      <div class="reos-status-item reos-status-storage" title="Browser Persistent Storage Quota">
+      <div class="volt-status-item">${language}</div>
+      <div class="volt-status-item">Ln ${cursor.line}, Col ${cursor.column}</div>
+      <div class="volt-status-item">${indentation}</div>
+      <div class="volt-status-item">${encoding}</div>
+      <div class="volt-status-item volt-status-storage" title="Browser Persistent Storage Quota">
         <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" style="margin-right: 4px; vertical-align: -1px;"><path d="M1.5 2A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5V5a1.5 1.5 0 0 0-1.5-1.5H7.5L6 2H1.5z"/></svg>
         ${storageReport}
       </div>

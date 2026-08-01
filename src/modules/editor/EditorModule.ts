@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { IEditorBuffer } from '@types';
 import { VFSModule } from '@modules/filesystem/VFSModule';
 import { LayoutState } from '@modules/shell/LayoutState';
@@ -14,7 +14,7 @@ export interface IEditorModule {
 }
 
 export class EditorModule implements IEditorModule {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private buffers: Map<string, IEditorBuffer> = new Map();
   private activePath: string | null = null;
   private container?: HTMLElement;
@@ -24,7 +24,7 @@ export class EditorModule implements IEditorModule {
   private autoSaveTimer: any = null;
 
   constructor(vfs?: VFSModule) {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
     this.vfs = vfs;
 
     this.bus.subscribe('NAV:SMART_ERROR_JUMP', event => {
@@ -82,14 +82,14 @@ export class EditorModule implements IEditorModule {
   public mount(container: HTMLElement): void {
     this.container = container;
     this.container.innerHTML = `
-      <div class="reos-editor-wrapper">
-        <div id="reos-editor-linenumbers" class="reos-editor-linenumbers">1</div>
-        <textarea id="reos-editor-textarea" class="reos-editor-textarea" spellcheck="false" wrap="off"></textarea>
+      <div class="volt-editor-wrapper">
+        <div id="volt-editor-linenumbers" class="volt-editor-linenumbers">1</div>
+        <textarea id="volt-editor-textarea" class="volt-editor-textarea" spellcheck="false" wrap="off"></textarea>
       </div>
     `;
 
-    this.textarea = this.container.querySelector('#reos-editor-textarea') as HTMLTextAreaElement;
-    this.lineNumbers = this.container.querySelector('#reos-editor-linenumbers') as HTMLElement;
+    this.textarea = this.container.querySelector('#volt-editor-textarea') as HTMLTextAreaElement;
+    this.lineNumbers = this.container.querySelector('#volt-editor-linenumbers') as HTMLElement;
 
     if (this.textarea) {
       this.textarea.addEventListener('input', () => {
@@ -251,8 +251,8 @@ export class EditorModule implements IEditorModule {
     const lineEls = this.lineNumbers.children;
     if (lineEls[line - 1]) {
       const el = lineEls[line - 1] as HTMLElement;
-      el.classList.add('reos-line-error-flash');
-      setTimeout(() => el.classList.remove('reos-line-error-flash'), 2500);
+      el.classList.add('volt-line-error-flash');
+      setTimeout(() => el.classList.remove('volt-line-error-flash'), 2500);
     }
 
     this.updateCursorPosition();

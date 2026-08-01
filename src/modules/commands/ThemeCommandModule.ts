@@ -1,6 +1,6 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { SYSTEM_CONSTANTS } from '@core/Constants';
 
 export class ThemeCommandModule implements ICommand {
@@ -8,7 +8,7 @@ export class ThemeCommandModule implements ICommand {
   public readonly aliases = [];
   public readonly description =
     'Lists available built-in themes or switches active theme (`theme Matrix`, `theme Light`).';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],
@@ -16,7 +16,7 @@ export class ThemeCommandModule implements ICommand {
     _context: IExecutionContext
   ): Promise<ICommandResult> {
     if (args.length === 0) {
-      let out = `Available Re\`OS Themes:\n`;
+      let out = `Available Volt Themes:\n`;
       for (const t of SYSTEM_CONSTANTS.SUPPORTED_THEMES) {
         out += `  - ${t}\n`;
       }

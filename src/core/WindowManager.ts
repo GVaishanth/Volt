@@ -1,4 +1,4 @@
-import { ReOSBus } from './ReOSBus';
+import { VoltBus } from './VoltBus';
 
 export interface OSWindow {
   id: string;
@@ -17,7 +17,7 @@ export interface OSWindow {
 
 export class WindowManager {
   private static instance: WindowManager;
-  private bus = ReOSBus.getInstance();
+  private bus = VoltBus.getInstance();
   private windows: Map<string, OSWindow> = new Map();
   private container?: HTMLElement;
   private topZIndex = 100;
@@ -50,32 +50,67 @@ export class WindowManager {
     if (this.shortcutsRegistered || typeof window === 'undefined') return;
     this.shortcutsRegistered = true;
 
+    let spacePressed = false;
+
     window.addEventListener('keydown', e => {
-      // Win + E: Open File Explorer
-      if (e.metaKey && e.key.toLowerCase() === 'e') {
-        e.preventDefault();
-        this.openApp('explorer', 'File Explorer');
+      // Helper to check if user is typing in a text field
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (
+        activeEl.tagName === 'INPUT' ||
+        activeEl.tagName === 'TEXTAREA' ||
+        (activeEl as HTMLElement).isContentEditable
+      );
+
+      // Track spacebar hold state
+      if (e.code === 'Space') {
+        if (!isTyping) {
+          spacePressed = true;
+          e.preventDefault(); // Prevent page scrolling
+        }
+        return;
       }
-      // Ctrl + Alt + T: Open Terminal
+
+      // Space + key shortcuts
+      if (spacePressed && !isTyping) {
+        const key = e.key.toLowerCase();
+        if (key === 'e') {
+          e.preventDefault();
+          this.bus.publish('APP:LAUNCH', { appName: 'explorer' });
+        } else if (key === 't') {
+          e.preventDefault();
+          this.bus.publish('APP:LAUNCH', { appName: 'terminal' });
+        } else if (key === 'r') {
+          e.preventDefault();
+          this.bus.publish('APP:LAUNCH', { appName: 'help' });
+        } else if (key === 'd') {
+          e.preventDefault();
+          this.toggleShowDesktop();
+        } else if (key === 'p') {
+          e.preventDefault();
+          this.openCommandPalette();
+        }
+      }
+
+      // Keep standard fallback modifier hotkeys
       if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 't') {
         e.preventDefault();
-        this.openApp('terminal', 'Terminal');
+        this.bus.publish('APP:LAUNCH', { appName: 'terminal' });
       }
-      // Win + R: Open Run dialog
-      if (e.metaKey && e.key.toLowerCase() === 'r') {
-        e.preventDefault();
-        this.openApp('run-dialog', 'Run Program');
-      }
-      // Win + D: Show Desktop (minimize all)
-      if (e.metaKey && e.key.toLowerCase() === 'd') {
-        e.preventDefault();
-        this.toggleShowDesktop();
-      }
-      // Ctrl + Shift + P: Command Palette
       if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'P') {
         e.preventDefault();
         this.openCommandPalette();
       }
+    });
+
+    window.addEventListener('keyup', e => {
+      if (e.code === 'Space') {
+        spacePressed = false;
+      }
+    });
+
+    // Reset modifier state when window loses focus to prevent stuck keys
+    window.addEventListener('blur', () => {
+      spacePressed = false;
     });
   }
 
@@ -273,6 +308,18 @@ export class WindowManager {
     let winX = win.position.x,
       winY = win.position.y;
 
+    const disableIframes = () => {
+      document.querySelectorAll('iframe').forEach(iframe => {
+        iframe.style.pointerEvents = 'none';
+      });
+    };
+
+    const enableIframes = () => {
+      document.querySelectorAll('iframe').forEach(iframe => {
+        iframe.style.pointerEvents = 'auto';
+      });
+    };
+
     header.addEventListener('mousedown', e => {
       if (win.maximized) return;
       isDragging = true;
@@ -281,6 +328,7 @@ export class WindowManager {
       winX = win.position.x;
       winY = win.position.y;
       this.focusWindow(win.id);
+      disableIframes();
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
     });
@@ -304,6 +352,7 @@ export class WindowManager {
     const onMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         isDragging = false;
+        enableIframes();
         // Snap feature
         if (e.clientX < 40) {
           // Snap Left
@@ -339,6 +388,7 @@ export class WindowManager {
       startW = win.size.width;
       startH = win.size.height;
       this.focusWindow(win.id);
+      disableIframes();
       document.addEventListener('mousemove', onResizeMove);
       document.addEventListener('mouseup', onResizeUp);
       e.preventDefault();
@@ -360,6 +410,7 @@ export class WindowManager {
     const onResizeUp = () => {
       if (isResizing) {
         isResizing = false;
+        enableIframes();
         document.removeEventListener('mousemove', onResizeMove);
         document.removeEventListener('mouseup', onResizeUp);
       }

@@ -1,8 +1,8 @@
 {
-  "name": "reos-environment",
+  "name": "volt-environment",
   "private": true,
   "version": "1.0.0",
-  "description": "Re`OS - A browser-based development operating environment engineered around Windows CMD (70%), VS Code modal editor (20%), and Chrome file tabs (10%). Local-first with zero backend.",
+  "description": "Volt - A browser-based development operating environment engineered around Windows CMD (70%), VS Code modal editor (20%), and Chrome file tabs (10%). Local-first with zero backend.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
-    "build:root": "npm run build && cp ReOS-Double-Click.html index.html",
+    "build:root": "npm run build && cp Volt-Double-Click.html index.html",
     "dev:clean": "cp template.html index.html"
   },
   "dependencies": {

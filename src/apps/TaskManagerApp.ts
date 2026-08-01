@@ -1,8 +1,8 @@
 import { OSWindow, WindowManager } from '@core/WindowManager';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class TaskManagerApp {
-  private bus = ReOSBus.getInstance();
+  private bus = VoltBus.getInstance();
   private intervalId: any = null;
 
   constructor() {}
@@ -94,7 +94,7 @@ export class TaskManagerApp {
     const processes = [
       {
         pid: 101,
-        name: 'reos_kernel_bus.sys',
+        name: 'volt_kernel_bus.sys',
         cpu: 1,
         mem: '1.2 MB',
         winId: null as string | null

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Re`OS Static Server (Python Standalone)
+Volt Static Server (Python Standalone)
 Serves the pre-compiled `dist/` folder with proper Cross-Origin Isolation headers
 (COOP/COEP) so WebAssembly, Web Workers, and SharedArrayBuffer (Atomics) work natively
 without requiring Node.js or npm.
@@ -14,7 +14,7 @@ import sys
 PORT = 8080
 DIRECTORY = "dist"
 
-class ReOSHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+class VoltHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
@@ -34,9 +34,9 @@ def main():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     # Start multi-threaded or standard TCP server
-    with socketserver.TCPServer(("", PORT), ReOSHTTPRequestHandler) as httpd:
+    with socketserver.TCPServer(("", PORT), VoltHTTPRequestHandler) as httpd:
         print("================================================================")
-        print("             Re`OS Static Local Server (Python)")
+        print("             Volt Static Local Server (Python)")
         print("================================================================")
         print(f" Serving directory : ./{DIRECTORY}")
         print(f" Local URL         : http://localhost:{PORT}")
@@ -48,7 +48,7 @@ def main():
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("\nShutting down Re`OS Python server. Goodbye!")
+            print("\nShutting down Volt Python server. Goodbye!")
 
 if __name__ == "__main__":
     main()

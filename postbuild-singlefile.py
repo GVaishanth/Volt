@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Post-build script to ensure 100% single-file double-click compatibility
-over file:// protocol without any web server or python server required.
+over file:// protocol without any web server required.
 """
 
 import os
@@ -31,8 +31,8 @@ def main():
             sys.exit(1)
 
         script_content = html[open_idx + len(open_tag):close_idx]
-        # Wrap content in IIFE
-        script_block = '<script>\n(() => {\n' + script_content + '\n})();\n</script>'
+        # Wrap content in classic script block
+        script_block = '<script>\n' + script_content + '\n</script>'
 
         # Build HTML with script removed from head and inserted before </body>
         before_script = html[:open_idx]
@@ -52,7 +52,7 @@ def main():
         f.write(html)
 
     # Copy to root for double-click access
-    root_copy = "ReOS-Double-Click.html"
+    root_copy = "Volt-Double-Click.html"
     with open(root_copy, "w", encoding="utf-8") as f:
         f.write(html)
 

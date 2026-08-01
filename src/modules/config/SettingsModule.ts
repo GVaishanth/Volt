@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { SYSTEM_CONSTANTS } from '@core/Constants';
 
 export interface ISystemSettings {
@@ -14,19 +14,19 @@ export interface ISettingsModule {
   resetToDefault(): Promise<void>;
 }
 
-const SETTINGS_STORAGE_KEY = 'reos_system_settings_v1';
+const SETTINGS_STORAGE_KEY = 'volt_system_settings_v1';
 
 export class SettingsModule implements ISettingsModule {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private settings: ISystemSettings = {
-    theme: 'Pure Black (Re`OS Default)',
+    theme: 'Pure Black (Volt Default)',
     fontSizePx: 14,
     autoSaveDelayMs: 2000,
     wordWrap: false
   };
 
   constructor() {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
     this.loadFromStorage();
   }
 
@@ -72,7 +72,7 @@ export class SettingsModule implements ISettingsModule {
 
   public async resetToDefault(): Promise<void> {
     this.settings = {
-      theme: 'Pure Black (Re`OS Default)',
+      theme: 'Pure Black (Volt Default)',
       fontSizePx: 14,
       autoSaveDelayMs: 2000,
       wordWrap: false

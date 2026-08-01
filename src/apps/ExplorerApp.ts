@@ -1,11 +1,11 @@
 import { VFSModule } from '@modules/filesystem/VFSModule';
-import { OSWindow } from '@core/WindowManager';
-import { ReOSBus } from '@core/ReOSBus';
+import { OSWindow, WindowManager } from '@core/WindowManager';
+import { VoltBus } from '@core/VoltBus';
 
 export class ExplorerApp {
   private vfs: VFSModule;
-  private currentPath: string = 'C:\\Users\\ReOS';
-  private bus = ReOSBus.getInstance();
+  private currentPath: string = 'C:\\Users\\Volt';
+  private bus = VoltBus.getInstance();
   private selectedPaths: Set<string> = new Set();
   private clipboard: { action: 'copy' | 'cut'; paths: string[] } | null = null;
   private sortBy: 'name' | 'size' | 'type' | 'modified' = 'name';
@@ -25,8 +25,8 @@ export class ExplorerApp {
         body.style.height = '100%';
         body.style.width = '100%';
         body.style.overflow = 'hidden';
-        body.style.backgroundColor = 'var(--reos-status-bg)';
-        body.style.color = 'var(--reos-fg)';
+        body.style.backgroundColor = 'var(--volt-status-bg)';
+        body.style.color = 'var(--volt-fg)';
         body.style.fontFamily = 'Consolas, monospace';
 
         this.renderExplorer(body);
@@ -44,6 +44,7 @@ export class ExplorerApp {
         <button class="explorer-btn btn-new-dir" style="background:#ffffff15; border:1px solid rgba(255,255,255,0.1); color:inherit; padding:3px 8px; cursor:pointer;">+ Folder</button>
         <button class="explorer-btn btn-export-ws" style="background:#228b223a; border:1px solid #228b2299; color:#98fb98; padding:3px 8px; cursor:pointer;" title="Export entire VFS workspace as JSON">📥 Export</button>
         <button class="explorer-btn btn-import-ws" style="background:#1e90ff3a; border:1px solid #1e90ff99; color:#87cefa; padding:3px 8px; cursor:pointer;" title="Import workspace JSON">📤 Import</button>
+        <button class="explorer-btn btn-upload-file" style="background:#ffa5002a; border:1px solid #ffa50099; color:#ffb533; padding:3px 8px; cursor:pointer;" title="Upload local files/images into this directory">⬆ Upload</button>
         <input class="explorer-search-input" type="text" placeholder="Search..." value="${this.searchKeyword}" style="width:100px; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; padding:3px 6px; font-family:inherit;" />
       </div>
 
@@ -54,10 +55,10 @@ export class ExplorerApp {
           <div style="font-weight: bold; font-size: 11px; opacity: 0.6; margin-bottom: 6px; padding-left: 4px;">SYSTEM DRIVES</div>
           <div class="tree-sidebar-item" data-path="C:\\" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">💾 Local Disk (C:)</div>
           <div style="font-weight: bold; font-size: 11px; opacity: 0.6; margin-top: 12px; margin-bottom: 6px; padding-left: 4px;">FAVORITES</div>
-          <div class="tree-sidebar-item" data-path="C:\\Users\\ReOS" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">🏠 ReOS Home</div>
-          <div class="tree-sidebar-item" data-path="C:\\Users\\ReOS\\Desktop" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">🖥️ Desktop</div>
-          <div class="tree-sidebar-item" data-path="C:\\Users\\ReOS\\Documents" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">📂 Documents</div>
-          <div class="tree-sidebar-item" data-path="C:\\Users\\ReOS\\Projects" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">📁 Projects</div>
+          <div class="tree-sidebar-item" data-path="C:\\Users\\Volt" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">🏠 Volt Home</div>
+          <div class="tree-sidebar-item" data-path="C:\\Users\\Volt\\Desktop" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">🖥️ Desktop</div>
+          <div class="tree-sidebar-item" data-path="C:\\Users\\Volt\\Documents" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">📂 Documents</div>
+          <div class="tree-sidebar-item" data-path="C:\\Users\\Volt\\Projects" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">📁 Projects</div>
           <div class="tree-sidebar-item" data-path="C:\\Recycle Bin" style="cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 6px; border-radius: 4px; font-size: 13px;">🗑️ Recycle Bin</div>
         </div>
 
@@ -110,6 +111,9 @@ export class ExplorerApp {
 
     const btnImport = body.querySelector('.btn-import-ws') as HTMLButtonElement;
     btnImport.addEventListener('click', () => this.importWorkspace(body));
+
+    const btnUpload = body.querySelector('.btn-upload-file') as HTMLButtonElement;
+    btnUpload.addEventListener('click', () => this.uploadLocalFiles(body));
 
     body.querySelectorAll('.tree-sidebar-item').forEach(el => {
       const p = el.getAttribute('data-path');
@@ -220,8 +224,14 @@ export class ExplorerApp {
         if (isDir) {
           this.navigateTo(e.path, body);
         } else {
-          // Open in code editor
-          this.bus.publish('EDITOR:OPEN_REQUEST', { targetPath: e.path });
+          const ext = e.name.split('.').pop()?.toLowerCase() || '';
+          const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext);
+          if (isImage) {
+            this.showImageOptionsBox(e.path, e.name, body);
+          } else {
+            // Open in code editor
+            this.bus.publish('EDITOR:OPEN_REQUEST', { targetPath: e.path });
+          }
         }
       });
 
@@ -402,22 +412,52 @@ export class ExplorerApp {
   }
 
   private async deleteItem(path: string, body: HTMLElement) {
-    if (confirm(`Are you sure you want to delete ${path.split('\\').pop()}?`)) {
-      const success = await this.vfs.moveToRecycleBin(path);
-      if (success) {
-        this.bus.publish('NOTIFICATION:ADD', { text: `Moved to Recycle Bin`, type: 'info' });
-        this.loadFiles(body);
+    const isInsideRecycleBin = path.toLowerCase().startsWith('c:\\recycle bin');
+    const fileName = path.split('\\').pop() || '';
+    const msg = isInsideRecycleBin
+      ? `Are you sure you want to permanently delete "${fileName}"? This action cannot be undone.`
+      : `Are you sure you want to move "${fileName}" to the Recycle Bin?`;
+
+    if (confirm(msg)) {
+      if (isInsideRecycleBin) {
+        const success = await this.vfs.unlink(path);
+        if (success) {
+          this.bus.publish('NOTIFICATION:ADD', { text: `Permanently deleted: ${fileName}`, type: 'info' });
+          this.loadFiles(body);
+        } else {
+          alert('Could not permanently delete file.');
+        }
       } else {
-        alert('Access Denied: Protected folder or file error.');
+        const success = await this.vfs.moveToRecycleBin(path);
+        if (success) {
+          this.bus.publish('NOTIFICATION:ADD', { text: `Moved to Recycle Bin: ${fileName}`, type: 'info' });
+          this.loadFiles(body);
+        } else {
+          alert('Access Denied: Protected folder or file error.');
+        }
       }
     }
   }
 
   private navigateTo(path: string, body: HTMLElement) {
     this.currentPath = path;
+    void this.vfs.setCWD(path);
     this.selectedPaths.clear();
     const pathInput = body.querySelector('.explorer-path-input') as HTMLInputElement;
     if (pathInput) pathInput.value = path;
+
+    // Synchronize left-sidebar favorites background-highlights in real-time!
+    body.querySelectorAll('.tree-sidebar-item').forEach(el => {
+      const p = el.getAttribute('data-path');
+      if (p) {
+        if (p.toLowerCase() === path.toLowerCase()) {
+          (el as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)';
+        } else {
+          (el as HTMLElement).style.backgroundColor = 'transparent';
+        }
+      }
+    });
+
     this.loadFiles(body);
   }
 
@@ -446,7 +486,7 @@ export class ExplorerApp {
   private exportWorkspace() {
     const workspace = {
       version: 2,
-      name: 'ReOS Workspace Export',
+      name: 'Volt Workspace Export',
       timestamp: Date.now(),
       files: [] as any[]
     };
@@ -469,7 +509,7 @@ export class ExplorerApp {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reos-workspace-${Date.now()}.json`;
+    a.download = `volt-workspace-${Date.now()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -530,5 +570,148 @@ export class ExplorerApp {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  private async showImageOptionsBox(path: string, fileName: string, _body: HTMLElement) {
+    // Remove any previous image options modals
+    document.querySelectorAll('.image-options-modal').forEach(el => el.remove());
+
+    const currentWP = localStorage.getItem('volt_desktop_wallpaper');
+    const hasCustomWP = currentWP === 'custom';
+
+    const modal = document.createElement('div');
+    modal.className = 'image-options-modal';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.background = 'rgba(0, 0, 0, 0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '1000000';
+
+    modal.innerHTML = `
+      <div class="image-options-card" style="width: 320px; background: #1a1a1a; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); overflow: hidden; font-family: inherit;">
+        <div style="padding: 10px 14px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:12px; font-weight:bold; color:#00ff66;">🖼️ IMAGE OPTIONS</span>
+          <button class="close-img-options" style="background:transparent; border:none; color:#aaa; font-size:16px; cursor:pointer;">&times;</button>
+        </div>
+        <div style="padding: 16px; display:flex; flex-direction:column; gap:10px;">
+          <div style="font-size:12px; opacity:0.8; word-break:break-all; text-align:center; margin-bottom:8px;">File: ${fileName}</div>
+          <button class="opt-open-image" style="background: #2a2a2a; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; font-family: inherit; font-size: 13px; cursor: pointer; border-radius: 4px; display:flex; align-items:center; gap:8px; justify-content:center; width: 100%;">
+            🔍 Open Image
+          </button>
+          <button class="opt-set-wallpaper" style="background: #007acc; border: none; color: #fff; padding: 8px; font-family: inherit; font-size: 13px; cursor: pointer; border-radius: 4px; font-weight:bold; display:flex; align-items:center; gap:8px; justify-content:center; width: 100%;">
+            🌌 Set as Wallpaper
+          </button>
+          ${hasCustomWP ? `
+          <button class="opt-remove-wallpaper" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 8px; font-family: inherit; font-size: 13px; cursor: pointer; border-radius: 4px; display:flex; align-items:center; gap:8px; justify-content:center; width: 100%;">
+            ❌ Remove as Wallpaper
+          </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.close-img-options')?.addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => {
+      if (e.target === modal) modal.remove();
+    });
+
+    // 1. Open Image Option
+    modal.querySelector('.opt-open-image')?.addEventListener('click', async () => {
+      modal.remove();
+      try {
+        const dataUrl = await this.vfs.readFileAsText(path);
+        // Spawns a custom photo viewer window!
+        const winMgr = WindowManager.getInstance();
+        winMgr.openApp('photo-viewer', `Photo Viewer - ${fileName}`, {
+          icon: '🖼️',
+          onMount: (winBody: HTMLElement) => {
+            winBody.style.backgroundColor = '#0a0a0a';
+            winBody.style.display = 'flex';
+            winBody.style.alignItems = 'center';
+            winBody.style.justifyContent = 'center';
+            winBody.style.height = '100%';
+            winBody.style.width = '100%';
+            winBody.style.overflow = 'auto';
+            winBody.innerHTML = `
+              <img src="${dataUrl}" style="max-width: 95%; max-height: 95%; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1);" />
+            `;
+          }
+        });
+      } catch {
+        alert('Could not open image file.');
+      }
+    });
+
+    // 2. Set as Background Wallpaper Option
+    modal.querySelector('.opt-set-wallpaper')?.addEventListener('click', async () => {
+      modal.remove();
+      try {
+        const dataUrl = await this.vfs.readFileAsText(path);
+        localStorage.setItem('volt_desktop_wallpaper', 'custom');
+        localStorage.setItem('volt_custom_wallpaper_data', dataUrl);
+        this.bus.publish('THEME:WALLPAPER_CHANGED', { wallpaper: 'custom', customDataUrl: dataUrl });
+        this.bus.publish('NOTIFICATION:ADD', {
+          text: 'Desktop wallpaper updated successfully!',
+          type: 'success'
+        });
+      } catch {
+        alert('Could not set file as background wallpaper.');
+      }
+    });
+
+    // 3. Remove Custom Wallpaper Option
+    modal.querySelector('.opt-remove-wallpaper')?.addEventListener('click', () => {
+      modal.remove();
+      localStorage.removeItem('volt_desktop_wallpaper');
+      localStorage.removeItem('volt_custom_wallpaper_data');
+      this.bus.publish('THEME:WALLPAPER_CHANGED', { wallpaper: 'deep-space' }); // Restore default preset
+      this.bus.publish('NOTIFICATION:ADD', {
+        text: 'Custom background wallpaper removed.',
+        type: 'info'
+      });
+    });
+  }
+
+  private uploadLocalFiles(body: HTMLElement) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.onchange = async () => {
+      if (!input.files || input.files.length === 0) return;
+      let count = 0;
+      for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext);
+        let content = '';
+
+        if (isImage) {
+          content = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+        } else {
+          content = await file.text();
+        }
+
+        const targetPath = `${this.currentPath}\\${file.name}`.replace(/\\+/g, '\\');
+        await this.vfs.writeFile(targetPath, content);
+        count++;
+      }
+      this.bus.publish('NOTIFICATION:ADD', {
+        text: `Uploaded ${count} file(s) into current folder!`,
+        type: 'success'
+      });
+      this.loadFiles(body);
+    };
+    input.click();
   }
 }

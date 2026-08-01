@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { ISmartErrorDiagnostic } from '@types';
 import { CommandHistoryModule } from './CommandHistoryModule';
 import { AutocompleteModule } from './AutocompleteModule';
@@ -17,7 +17,7 @@ export interface ITerminalEngineModule {
 }
 
 export class TerminalEngineModule implements ITerminalEngineModule {
-  private bus: ReOSBus;
+  private bus: VoltBus;
   private history: CommandHistoryModule;
   private autocomplete: AutocompleteModule;
   private vfs?: VFSModule;
@@ -25,11 +25,17 @@ export class TerminalEngineModule implements ITerminalEngineModule {
   private outputElement?: HTMLElement;
   private inputElement?: HTMLInputElement;
   private promptPrefixElement?: HTMLElement;
-  private cwd: string = 'C:\\Users\\ReOS';
+  private cwd: string = 'C:\\Users\\Volt';
   private isWaitingForStdin: boolean = false;
+  private outputQueue: string[] = [];
+  private isProcessingQueue: boolean = false;
+  private errorQueue: string[] = [];
+  private isProcessingErrorQueue: boolean = false;
+  private userHasScrolledUp: boolean = false;
+  private isProgrammaticScroll: boolean = false;
 
   constructor(vfs?: VFSModule) {
-    this.bus = ReOSBus.getInstance();
+    this.bus = VoltBus.getInstance();
     this.history = new CommandHistoryModule();
     this.autocomplete = new AutocompleteModule();
     this.vfs = vfs;
@@ -66,18 +72,32 @@ export class TerminalEngineModule implements ITerminalEngineModule {
   public mount(container: HTMLElement): void {
     this.container = container;
     this.container.innerHTML = `
-      <div class="reos-terminal-wrapper">
-        <div id="reos-terminal-output" class="reos-terminal-output"></div>
-        <div class="reos-terminal-input-line">
-          <span id="reos-prompt-prefix" class="reos-prompt-prefix">C:\\Users\\ReOS&gt;&nbsp;</span>
-          <input id="reos-terminal-input" class="reos-terminal-input" type="text" spellcheck="false" autocomplete="off" autofocus />
+      <div class="volt-terminal-wrapper">
+        <div id="volt-terminal-output" class="volt-terminal-output"></div>
+        <div class="volt-terminal-input-line">
+          <span id="volt-prompt-prefix" class="volt-prompt-prefix">C:\\Users\\Volt&gt;&nbsp;</span>
+          <input id="volt-terminal-input" class="volt-terminal-input" type="text" spellcheck="false" autocomplete="off" autofocus />
         </div>
       </div>
     `;
 
-    this.outputElement = this.container.querySelector('#reos-terminal-output') as HTMLElement;
-    this.promptPrefixElement = this.container.querySelector('#reos-prompt-prefix') as HTMLElement;
-    this.inputElement = this.container.querySelector('#reos-terminal-input') as HTMLInputElement;
+    this.outputElement = this.container.querySelector('#volt-terminal-output') as HTMLElement;
+    this.promptPrefixElement = this.container.querySelector('#volt-prompt-prefix') as HTMLElement;
+    this.inputElement = this.container.querySelector('#volt-terminal-input') as HTMLInputElement;
+
+    const wrapper = this.container.querySelector('.volt-terminal-wrapper') as HTMLElement;
+    if (wrapper) {
+      wrapper.addEventListener('scroll', () => {
+        if (this.isProgrammaticScroll) return;
+        const threshold = 80;
+        const isAtBottom = wrapper.scrollHeight - wrapper.scrollTop - wrapper.clientHeight < threshold;
+        if (!isAtBottom) {
+          this.userHasScrolledUp = true;
+        } else {
+          this.userHasScrolledUp = false;
+        }
+      });
+    }
 
     this.bindEvents();
     this.renderWelcomeBanner();
@@ -88,7 +108,7 @@ export class TerminalEngineModule implements ITerminalEngineModule {
 
     this.container.addEventListener('click', e => {
       const target = e.target as HTMLElement;
-      if (target && target.classList.contains('reos-error-link')) {
+      if (target && target.classList.contains('volt-error-link')) {
         const file = target.getAttribute('data-file');
         const line = parseInt(target.getAttribute('data-line') || '1', 10);
         const col = parseInt(target.getAttribute('data-col') || '1', 10);
@@ -172,11 +192,11 @@ export class TerminalEngineModule implements ITerminalEngineModule {
   }
 
   public renderWelcomeBanner(): void {
-    const banner = `in.nextWeb
+    const banner = `VPU presents VOLT
 Version 2.0.0
 Browser: Chrome (Chromium) / Modern Web
 Persistent Storage: 1.4 MB Used (OPFS)
-Supported Languages: C, C++, Python, Java
+Supported Languages: C, C++, Python, Java, JavaScript, Bash
 Type help to begin.
 
 `;
@@ -192,51 +212,118 @@ Type help to begin.
   }
 
   public writeOutput(text: string): void {
-    if (!this.outputElement) return;
-    const span = document.createElement('span');
-    span.innerText = text;
-    this.outputElement.appendChild(span);
-    this.scrollToBottom();
+    this.outputQueue.push(text);
+    void this.processOutputQueue();
+  }
+
+  private async processOutputQueue(): Promise<void> {
+    if (this.isProcessingQueue || !this.outputElement) return;
+    this.isProcessingQueue = true;
+
+    while (this.outputQueue.length > 0) {
+      const text = this.outputQueue.shift();
+      if (!text) continue;
+
+      const lines = text.split('\n');
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const span = document.createElement('span');
+        this.outputElement.appendChild(span);
+
+        // Split word-by-word inside each line
+        const tokens = line.split(/(\s+)/).filter(Boolean);
+        const delay = text.length > 200 ? 1 : 12;
+
+        for (const token of tokens) {
+          span.innerText += token;
+          this.scrollToBottom();
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        if (i < lines.length - 1) {
+          const br = document.createElement('br');
+          this.outputElement.appendChild(br);
+          this.scrollToBottom();
+        }
+      }
+    }
+
+    this.isProcessingQueue = false;
   }
 
   public writeError(text: string): void {
-    if (!this.outputElement) return;
-    const diagnostics = this.parseSmartErrorLinks(text);
-    if (diagnostics.length === 0) {
-      const span = document.createElement('span');
-      span.className = 'reos-terminal-error';
-      span.innerText = text;
-      this.outputElement.appendChild(span);
-    } else {
-      const containerSpan = document.createElement('span');
-      containerSpan.className = 'reos-terminal-error';
-      const lines = text.split('\n');
-      for (const line of lines) {
-        const match = line.match(/^([a-zA-Z0-9_.\-\\]+):(\d+):(\d+):/);
-        if (match) {
-          const file = match[1];
-          const lineNum = match[2];
-          const colNum = match[3];
-          const link = document.createElement('span');
-          link.className = 'reos-error-link';
-          link.setAttribute('data-file', file);
-          link.setAttribute('data-line', lineNum);
-          link.setAttribute('data-col', colNum);
-          link.innerText = `${file}:${lineNum}:${colNum}`;
+    this.errorQueue.push(text);
+    void this.processErrorQueue();
+  }
 
-          containerSpan.appendChild(link);
-          const rest = document.createElement('span');
-          rest.innerText = line.substring(match[0].length) + '\n';
-          containerSpan.appendChild(rest);
-        } else {
-          const normal = document.createElement('span');
-          normal.innerText = line + '\n';
-          containerSpan.appendChild(normal);
+  private async processErrorQueue(): Promise<void> {
+    if (this.isProcessingErrorQueue || !this.outputElement) return;
+    this.isProcessingErrorQueue = true;
+
+    while (this.errorQueue.length > 0) {
+      const text = this.errorQueue.shift();
+      if (!text) continue;
+
+      const diagnostics = this.parseSmartErrorLinks(text);
+      if (diagnostics.length === 0) {
+        const lines = text.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const span = document.createElement('span');
+          span.className = 'volt-terminal-error';
+          this.outputElement.appendChild(span);
+
+          const tokens = line.split(/(\s+)/).filter(Boolean);
+          const delay = text.length > 200 ? 1 : 12;
+
+          for (const token of tokens) {
+            span.innerText += token;
+            this.scrollToBottom();
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+
+          if (i < lines.length - 1) {
+            const br = document.createElement('br');
+            this.outputElement.appendChild(br);
+            this.scrollToBottom();
+          }
         }
+      } else {
+        // Direct append for clickable compiler diagnostics to maintain accuracy and prevent broken link-ranges during stream
+        const containerSpan = document.createElement('span');
+        containerSpan.className = 'volt-terminal-error';
+        const lines = text.split('\n');
+        for (const line of lines) {
+          const match = line.match(/^([a-zA-Z0-9_.\-\\]+):(\d+):(\d+):/);
+          if (match) {
+            const file = match[1];
+            const lineNum = match[2];
+            const colNum = match[3];
+            const link = document.createElement('span');
+            link.className = 'volt-error-link';
+            link.setAttribute('data-file', file);
+            link.setAttribute('data-line', lineNum);
+            link.setAttribute('data-col', colNum);
+            link.innerText = `${file}:${lineNum}:${colNum}`;
+
+            containerSpan.appendChild(link);
+            const rest = document.createElement('span');
+            rest.innerText = line.substring(match[0].length) + '\n';
+            containerSpan.appendChild(rest);
+          } else {
+            const normal = document.createElement('span');
+            normal.innerText = line + '\n';
+            containerSpan.appendChild(normal);
+          }
+        }
+        this.outputElement.appendChild(containerSpan);
+        this.scrollToBottom(true);
       }
-      this.outputElement.appendChild(containerSpan);
     }
-    this.scrollToBottom();
+
+    this.isProcessingErrorQueue = false;
   }
 
   public clearScrollback(): void {
@@ -286,9 +373,22 @@ Type help to begin.
     }
   }
 
-  private scrollToBottom(): void {
-    if (this.outputElement && this.container) {
-      this.container.scrollTop = this.container.scrollHeight;
+  private scrollToBottom(force: boolean = false): void {
+    if (this.container) {
+      const wrapper = this.container.querySelector('.volt-terminal-wrapper') as HTMLElement;
+      if (wrapper) {
+        const threshold = 80;
+        const isNearBottom = wrapper.scrollHeight - wrapper.scrollTop - wrapper.clientHeight < threshold;
+        if (isNearBottom || force || wrapper.scrollTop === 0) {
+          if (!this.userHasScrolledUp || force) {
+            this.isProgrammaticScroll = true;
+            wrapper.scrollTop = wrapper.scrollHeight;
+            setTimeout(() => {
+              this.isProgrammaticScroll = false;
+            }, 30);
+          }
+        }
+      }
     }
   }
 }

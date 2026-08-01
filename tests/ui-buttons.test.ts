@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 import { AppShellModule } from '@modules/shell/AppShellModule';
 
-describe('ReOS UI Buttons Audit', () => {
-  let bus: ReOSBus;
+describe('Volt UI Buttons Audit', () => {
+  let bus: VoltBus;
   let viewport: HTMLElement;
 
   beforeEach(async () => {
-    bus = ReOSBus.getInstance();
+    bus = VoltBus.getInstance();
     (bus as unknown as { listeners: Map<unknown, unknown> }).listeners = new Map();
 
     // Mock capability
@@ -25,14 +25,14 @@ describe('ReOS UI Buttons Audit', () => {
 
     document.body.innerHTML = '';
     viewport = document.createElement('div');
-    viewport.id = 'reos-viewport';
+    viewport.id = 'volt-viewport';
     document.body.appendChild(viewport);
 
     // Clear storage
     try {
       if (typeof localStorage !== 'undefined') localStorage.clear();
       if (typeof indexedDB !== 'undefined') {
-        const dbNames = ['reos_vfs_db_v1'];
+        const dbNames = ['volt_vfs_db_v1'];
         for (const name of dbNames) {
           indexedDB.deleteDatabase(name);
         }
@@ -44,10 +44,10 @@ describe('ReOS UI Buttons Audit', () => {
     const shell = new AppShellModule();
     await shell.mount(viewport);
 
-    const uploadBtn = document.getElementById('reos-upload-btn');
-    const downloadBtn = document.getElementById('reos-download-btn');
-    const settingsBtn = document.getElementById('reos-settings-btn');
-    const explorerToggleBtn = document.getElementById('reos-explorer-toggle-btn');
+    const uploadBtn = document.getElementById('volt-upload-btn');
+    const downloadBtn = document.getElementById('volt-download-btn');
+    const settingsBtn = document.getElementById('volt-settings-btn');
+    const explorerToggleBtn = document.getElementById('volt-explorer-toggle-btn');
 
     expect(uploadBtn).toBeTruthy();
     expect(downloadBtn).toBeTruthy();
@@ -63,8 +63,8 @@ describe('ReOS UI Buttons Audit', () => {
     const shell = new AppShellModule();
     await shell.mount(viewport);
 
-    const settingsBtn = document.getElementById('reos-settings-btn') as HTMLElement;
-    const modal = () => document.getElementById('reos-settings-modal') as HTMLElement;
+    const settingsBtn = document.getElementById('volt-settings-btn') as HTMLElement;
+    const modal = () => document.getElementById('volt-settings-modal') as HTMLElement;
 
     expect(modal().classList.contains('hidden')).toBe(true);
 
@@ -84,7 +84,7 @@ describe('ReOS UI Buttons Audit', () => {
     expect(modal().classList.contains('hidden')).toBe(false);
 
     // Close via close button
-    const closeBtn = document.getElementById('reos-settings-close-btn') as HTMLElement;
+    const closeBtn = document.getElementById('volt-settings-close-btn') as HTMLElement;
     closeBtn.click();
     await new Promise(r => setTimeout(r, 20));
     expect(modal().classList.contains('hidden')).toBe(true);
@@ -94,8 +94,8 @@ describe('ReOS UI Buttons Audit', () => {
     const shell = new AppShellModule();
     await shell.mount(viewport);
 
-    const toggleBtn = document.getElementById('reos-explorer-toggle-btn') as HTMLElement;
-    const panel = () => document.getElementById('reos-explorer-panel') as HTMLElement;
+    const toggleBtn = document.getElementById('volt-explorer-toggle-btn') as HTMLElement;
+    const panel = () => document.getElementById('volt-explorer-panel') as HTMLElement;
 
     // Initially hidden
     expect(panel().classList.contains('hidden')).toBe(true);
@@ -122,7 +122,7 @@ describe('ReOS UI Buttons Audit', () => {
       uploadRequested = true;
     });
 
-    const uploadBtn = document.getElementById('reos-upload-btn') as HTMLElement;
+    const uploadBtn = document.getElementById('volt-upload-btn') as HTMLElement;
     uploadBtn.click();
     await new Promise(r => setTimeout(r, 20));
     expect(uploadRequested).toBe(true);
@@ -139,7 +139,7 @@ describe('ReOS UI Buttons Audit', () => {
       targetCaptured = (e.payload as any)?.target || null;
     });
 
-    const downloadBtn = document.getElementById('reos-download-btn') as HTMLElement;
+    const downloadBtn = document.getElementById('volt-download-btn') as HTMLElement;
     downloadBtn.click();
     await new Promise(r => setTimeout(r, 20));
     expect(downloadRequested).toBe(true);
@@ -151,7 +151,7 @@ describe('ReOS UI Buttons Audit', () => {
     const shell = new AppShellModule();
     await shell.mount(viewport);
 
-    const panel = () => document.getElementById('reos-explorer-panel') as HTMLElement;
+    const panel = () => document.getElementById('volt-explorer-panel') as HTMLElement;
     expect(panel().classList.contains('hidden')).toBe(true);
 
     bus.publish('EXPLORER:TOGGLE');
@@ -168,7 +168,7 @@ describe('ReOS UI Buttons Audit', () => {
     await shell.mount(viewport);
 
     // Check that drop handlers are registered by verifying shell container exists
-    const container = document.querySelector('.reos-shell-container') as HTMLElement;
+    const container = document.querySelector('.volt-shell-container') as HTMLElement;
     expect(container).toBeTruthy();
   });
 });

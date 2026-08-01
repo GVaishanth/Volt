@@ -1,5 +1,5 @@
 const fs = require('fs');
-const html = fs.readFileSync('ReOS-Double-Click.html', 'utf8');
+const html = fs.readFileSync('Volt-Double-Click.html', 'utf8');
 
 // Extract CSS
 const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/);
@@ -15,11 +15,11 @@ const indexHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Re\`OS — Local-First Development Operating Environment</title>
+  <title>Volt — Local-First Development Operating Environment</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="theme-pure-black">
-  <div id="reos-viewport"></div>
+  <div id="volt-viewport"></div>
   <script src="app.js"></script>
 </body>
 </html>`;

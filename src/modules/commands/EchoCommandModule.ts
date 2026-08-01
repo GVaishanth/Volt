@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class EchoCommandModule implements ICommand {
   public readonly name = 'echo';
   public readonly aliases = [];
   public readonly description =
     'Prints text to the terminal or redirects output to a target file (`echo text > file.txt`).';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],

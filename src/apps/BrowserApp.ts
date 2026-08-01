@@ -1,10 +1,10 @@
 import { VFSModule } from '@modules/filesystem/VFSModule';
 import { OSWindow } from '@core/WindowManager';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class BrowserApp {
   private vfs: VFSModule;
-  private bus = ReOSBus.getInstance();
+  private bus = VoltBus.getInstance();
   private currentUrl: string = 'http://localhost:3000/index.html';
   private history: string[] = ['http://localhost:3000/index.html'];
   private historyIndex: number = 0;
@@ -147,8 +147,8 @@ export class BrowserApp {
       filename = match[1];
     }
 
-    const fullPath = `C:\\Users\\ReOS\\Projects\\${filename}`.replace(/\\+/g, '\\');
-    const defaultFullPath = `C:\\Users\\ReOS\\README.txt`;
+    const fullPath = `C:\\Users\\Volt\\Projects\\${filename}`.replace(/\\+/g, '\\');
+    const defaultFullPath = `C:\\Users\\Volt\\README.txt`;
 
     try {
       let content = '';
@@ -172,7 +172,7 @@ export class BrowserApp {
             <div class="card">
               <h1>🌐 Local Preview</h1>
               <p>Welcome to the V2 Local Preview Server!</p>
-              <p style="font-size: 13px; color: #666;">Create <strong>C:\\Users\\ReOS\\Projects\\index.html</strong> inside the File Explorer, then reload to preview your real HTML project live in-browser!</p>
+              <p style="font-size: 13px; color: #666;">Create <strong>C:\\Users\\Volt\\Projects\\index.html</strong> inside the File Explorer, then reload to preview your real HTML project live in-browser!</p>
               <button onclick="console.log('Button clicked at ' + new Date().toLocaleTimeString())">Test Console Log</button>
             </div>
             <script>

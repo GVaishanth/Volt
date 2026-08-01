@@ -1,12 +1,12 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class MoveCommandModule implements ICommand {
   public readonly name = 'move';
   public readonly aliases = ['mv'];
   public readonly description = 'Relocates target files or directories across the virtual disk.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],

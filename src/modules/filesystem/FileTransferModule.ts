@@ -19,9 +19,22 @@ export class FileTransferModule implements IFileTransferModule {
 
     const files = Array.from(event.dataTransfer.files);
     for (const file of files) {
-      const text = await file.text();
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext);
+      let content = '';
+
+      if (isImage) {
+        content = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      } else {
+        content = await file.text();
+      }
+
       const targetPath = `${targetCwd}\\${file.name}`.replace(/\\+/g, '\\');
-      await this.vfs.writeFile(targetPath, text);
+      await this.vfs.writeFile(targetPath, content);
       createdPaths.push(targetPath);
     }
     return createdPaths;
@@ -29,6 +42,6 @@ export class FileTransferModule implements IFileTransferModule {
 
   public async exportDirectoryToZip(_path: string): Promise<Blob> {
     // Basic fallback: return text representation
-    return new Blob(['Re`OS Project Archive Snapshot'], { type: 'text/plain' });
+    return new Blob(['Volt Project Archive Snapshot'], { type: 'text/plain' });
   }
 }

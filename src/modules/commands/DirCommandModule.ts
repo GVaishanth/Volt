@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class DirCommandModule implements ICommand {
   public readonly name = 'dir';
   public readonly aliases = ['ls'];
   public readonly description =
     'Displays directory listings. Supports flags -l (detailed permissions/sizes), -a (all entries), /tree or /w.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],
@@ -46,7 +46,7 @@ export class DirCommandModule implements ICommand {
       commandName: this.name,
       description: this.description,
       syntax: `dir [path] [/tree] [-l] [-a] [or] ls [-l] [-a] [path]`,
-      examples: [`dir`, `ls -l`, `ls -la C:\\Users\\ReOS`, `dir /tree`]
+      examples: [`dir`, `ls -l`, `ls -la C:\\Users\\Volt`, `dir /tree`]
     };
   }
 }

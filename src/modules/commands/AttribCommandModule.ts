@@ -1,13 +1,13 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult, IHelpDocument } from '@types';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export class AttribCommandModule implements ICommand {
   public readonly name = 'attrib';
   public readonly aliases = [];
   public readonly description =
     'Displays file attributes (Archive, Directory, Read-Only flags) inside the virtual filesystem.';
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public async execute(
     args: string[],

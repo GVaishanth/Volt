@@ -1,7 +1,7 @@
 import { ICommand } from './ICommand';
 import { IExecutionContext, ICommandResult } from '@types';
 import { LevenshteinUtil } from '@utils/levenshtein';
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export interface ICommandDispatcher {
   registerCommand(command: ICommand): void;
@@ -13,7 +13,7 @@ export interface ICommandDispatcher {
 export class CommandDispatcher implements ICommandDispatcher {
   private commands: Map<string, ICommand> = new Map();
   private levenshtein: LevenshteinUtil = new LevenshteinUtil();
-  private bus: ReOSBus = ReOSBus.getInstance();
+  private bus: VoltBus = VoltBus.getInstance();
 
   public registerCommand(command: ICommand): void {
     this.commands.set(command.name.toLowerCase(), command);
@@ -36,8 +36,18 @@ export class CommandDispatcher implements ICommandDispatcher {
       return { success: true, exitCode: 0 };
     }
 
-    // Parse tokens and flags
-    const tokens = trimmed.split(/\s+/);
+    // Parse tokens supporting double-quoted arguments
+    const tokens: string[] = [];
+    const tokenRegex = /[^\s"]+|"([^"]*)"/g;
+    let match;
+    while ((match = tokenRegex.exec(trimmed)) !== null) {
+      if (match[1] !== undefined) {
+        tokens.push(match[1]);
+      } else {
+        tokens.push(match[0]);
+      }
+    }
+
     let cmdName = tokens[0].toLowerCase();
     const args: string[] = [];
     const flags: Map<string, boolean> = new Map();

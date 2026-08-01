@@ -1,4 +1,4 @@
-import { ReOSBus } from '@core/ReOSBus';
+import { VoltBus } from '@core/VoltBus';
 
 export interface ILayoutState {
   editorOpen: boolean;
@@ -8,7 +8,7 @@ export interface ILayoutState {
 
 export class LayoutState implements ILayoutState {
   private static instance: LayoutState;
-  private bus = ReOSBus.getInstance();
+  private bus = VoltBus.getInstance();
   private unsubscribers: (() => void)[] = [];
 
   public editorOpen: boolean = false;
@@ -48,8 +48,8 @@ export class LayoutState implements ILayoutState {
   }
 
   private apply(): void {
-    const editorZone = document.getElementById('reos-editor-zone');
-    const terminalZone = document.getElementById('reos-terminal-zone');
+    const editorZone = document.getElementById('volt-editor-zone');
+    const terminalZone = document.getElementById('volt-terminal-zone');
 
     if (editorZone) {
       if (this.editorOpen) {

@@ -8,7 +8,7 @@ self.onmessage = async (event: MessageEvent) => {
     self.postMessage({
       type: 'EXEC:STDOUT_CHUNK',
       payload: {
-        text: `[Re\`OS WebWorker] Compiling & running ${fileName} inside CheerpJ WASM JVM...\n`
+        text: `[Volt WebWorker] Compiling & running ${fileName} inside CheerpJ WASM JVM...\n`
       }
     });
 

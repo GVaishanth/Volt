@@ -28,3 +28,6 @@ export * from './SettingsCommandModule';
 export * from './AboutCommandModule';
 export * from './UploadCommandModule';
 export * from './DownloadCommandModule';
+export * from './SysteminfoCommandModule';
+export * from './TaskkillCommandModule';
+export * from './GrepCommandModule';

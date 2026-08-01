@@ -1,40 +1,40 @@
 :root,
 .theme-pure-black {
-  --reos-bg: #000000;
-  --reos-fg: #e0e0e0;
-  --reos-prompt: #ffffff;
-  --reos-editor-bg: #0a0a0a;
-  --reos-status-bg: #111111;
+  --volt-bg: #000000;
+  --volt-fg: #e0e0e0;
+  --volt-prompt: #ffffff;
+  --volt-editor-bg: #0a0a0a;
+  --volt-status-bg: #111111;
 }
 
 .theme-classic-cmd {
-  --reos-bg: #0c0c0c;
-  --reos-fg: #cccccc;
-  --reos-prompt: #cccccc;
-  --reos-editor-bg: #0c0c0c;
-  --reos-status-bg: #181818;
+  --volt-bg: #0c0c0c;
+  --volt-fg: #cccccc;
+  --volt-prompt: #cccccc;
+  --volt-editor-bg: #0c0c0c;
+  --volt-status-bg: #181818;
 }
 
 .theme-vscode-dark {
-  --reos-bg: #1e1e1e;
-  --reos-fg: #d4d4d4;
-  --reos-prompt: #569cd6;
-  --reos-editor-bg: #1e1e1e;
-  --reos-status-bg: #007acc;
+  --volt-bg: #1e1e1e;
+  --volt-fg: #d4d4d4;
+  --volt-prompt: #569cd6;
+  --volt-editor-bg: #1e1e1e;
+  --volt-status-bg: #007acc;
 }
 
 .theme-matrix {
-  --reos-bg: #000000;
-  --reos-fg: #00ff66;
-  --reos-prompt: #00ff66;
-  --reos-editor-bg: #001100;
-  --reos-status-bg: #002200;
+  --volt-bg: #000000;
+  --volt-fg: #00ff66;
+  --volt-prompt: #00ff66;
+  --volt-editor-bg: #001100;
+  --volt-status-bg: #002200;
 }
 
 .theme-light {
-  --reos-bg: #ffffff;
-  --reos-fg: #1a1a1a;
-  --reos-prompt: #0066cc;
-  --reos-editor-bg: #f5f5f5;
-  --reos-status-bg: #e0e0e0;
+  --volt-bg: #ffffff;
+  --volt-fg: #1a1a1a;
+  --volt-prompt: #0066cc;
+  --volt-editor-bg: #f5f5f5;
+  --volt-status-bg: #e0e0e0;
 }
